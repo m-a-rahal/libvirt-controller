@@ -1,3 +1,4 @@
+from typing import List, Union
 import libvirt
 import sys
 from manager.request_handler import RequestHandler
@@ -8,12 +9,17 @@ class Manager:
         self._running = True
 
     def __int__(self):
-        self.connections = []
+        self.connections: List[libvirt.virConnect] = []
 
-    def new_connection(self, name) :
-        conn = libvirt.open(name)
+    def new_connection(self, uri) -> Union[libvirt.virConnect, None]:
+        """
+        Establishes connection and returns None if there's nothing to return
+        :param uri: connection 
+        :return:
+        """
+        conn = libvirt.open(uri)
         if conn is None:
-            print(f'Failed to open connection to {name}', file=sys.stderr)
+            print(f'Failed to open connection to {uri}', file=sys.stderr)
             return None
         print('Connection successful')
         self.connections.append(conn)
