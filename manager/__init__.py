@@ -5,10 +5,10 @@ from manager.request_handler import RequestHandler
 
 
 class Manager:
+    DEFAULT_URI = 'qemu:///system'
+
     def __init__(self):
         self._running = True
-
-    def __int__(self):
         self.connections: List[libvirt.virConnect] = []
 
     def new_connection(self, uri) -> Union[libvirt.virConnect, None]:
@@ -33,11 +33,20 @@ class Manager:
         return self._running
 
 
+def example_request():
+    with open('../examples/xmldoc_example.xml', 'r') as f:
+        return f.read()
+
 if __name__ == '__main__':
     manager = Manager()
-    connection = Manager.new_connection('qemu:///system')
-    while manager.isRunning():
-        xmldesc = RequestHandler.get_request()
-        connection.createXML(xmldesc)
-    
+    connection = manager.new_connection('qemu:///system')
+    xmldesc = example_request()
+    try:
+        domain = connection.createXML(xmldesc)
+        print(domain)
+        domain.destroy()
+    except Exception as e:
+        print(e)
 
+    stats = connection.getAllDomainStats()
+    print(stats)

@@ -1,7 +1,5 @@
 # dependencies : xmltodict 0.13
 from __future__ import print_function
-
-import libvirt
 from testing import test_all_files_in
 import sys
 import libvirt
