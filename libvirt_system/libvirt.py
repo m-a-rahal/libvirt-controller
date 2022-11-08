@@ -1,7 +1,10 @@
 import threading
 import multiprocessing
 import libvirt
+import sys
 from json_xml import *
+from libvirt_system.io import print_stderr
+
 
 
 # libvirt
@@ -12,7 +15,9 @@ class LibvirtManager:
     def __int__(self, default_connection_uri = 'qemu:///system'):
         self.Q = multiprocessing.SimpleQueue
         self.default_connection_uri = default_connection_uri
-        self.conn = self.create_connection_to_libvrit(default_connection_uri)
+        self.conn = self.create_connection_to_libvirt(default_connection_uri)
+        if self.conn is None:
+            exit(1) # failed to make connection
 
     @staticmethod
     def alert(self, source, message):
@@ -45,23 +50,37 @@ class LibvirtManager:
         task_dict = json_to_dict(task)
         command = task_dict.get(LibvirtManager.COMMAND_JSON_FIELD)  # get the command
         arguments = task_dict.get(LibvirtManager.ARGS_JSON_FIELD)   # get command args/kwargs
+        # ease of use
+        conn = self.conn
         if command == 'open_connection':
             # you may choose to create a new connection for some reason
             # you must have the name of the connection saved to pass it over for other commands
             # TODO: create this if needed
             pass
-        elif command == 'createXML':
+        elif command == 'createXML':  # TODO: this part might need to be redone
+            # createXMl command must have and argument called 'xml' that contains the json equivalent of the xml file
+            xml = arguments['xml']  # TODO: make sure this is right
+            domain =  conn.createXML(xml)
+            if domain is None:
+                print_stderr(f'failed to create domain from XML definition') # TODO: maybe be more descriptive here
+            else:
+                print_stderr(f'Guest {domain.name()} has booted.')
+        elif command == 'defineXML':
+            return conn.defineXML(arguments['xml'])
 
-    def create_connection_to_libvrit(self, default_connection_uri):
+        elif command == '':
+            pass
+
+    @staticmethod
+    def create_connection_to_libvirt(uri):
         """
-                Establishes connection and returns None if there's nothing to return
-                :param uri: connection
-                :return:
-                """
+        Establishes connection and returns None if there's nothing to return
+        :param uri: connection
+        :return:
+        """
         conn = libvirt.open(uri)
         if conn is None:
-            print(f'Failed to open connection to {uri}', file=sys.stderr)
+            print_stderr(f'Failed to open connection to {uri}')
             return None
-        print('Connection successful')
-        self.connections.append(conn)
+        print_stderr('Connection successful')
         return conn
