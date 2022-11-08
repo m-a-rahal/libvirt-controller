@@ -3,23 +3,30 @@ from __future__ import print_function
 from testing import test_all_files_in
 import sys
 import libvirt
+from libvirt_system.libvirt import LibvirtManager
+from json_xml import *
 
 
 def main():
-    # testing XML JSON
-    # test_all_files_in('examples')
-    first_connection()
+    with open('json_xml/examples/xmldoc_example.xml','r') as f:
+        xml = f.read()
+    obj = json_to_dict(xml_to_json(xml))
+    print(obj)
+    pass
 
-def first_connection():
-    link = 'qemu:///system'
-    conn = libvirt.open(link)
-    if conn == None:
-        print(f'Failed to open connection to {link}', file=sys.stderr)
-        exit(1)
-    print('Connection successful')
-    conn.close()
-    print('Connection closed.')
-    exit(0)
+
+def lookup_by_name(name='test_vm_1'):
+    manager = LibvirtManager()
+    conn = manager.conn
+    domain = conn.lookupByName(name)
+    print(domain)
+    # create domain
+    domain.create()
+    # is the domain running
+    print(domain.isActive())
+    # destroy
+    domain.destroy()
+
 
 if __name__ == '__main__':
     main()

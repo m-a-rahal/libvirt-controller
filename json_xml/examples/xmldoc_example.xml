@@ -1,3 +1,4 @@
+<!-- copied from virt-manager -->
 <domain type="kvm">
   <name>new_domain</name>
   <title></title>

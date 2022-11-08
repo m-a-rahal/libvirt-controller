@@ -1,32 +1,31 @@
+import random
 import threading
 import multiprocessing
 import libvirt
 import sys
 from json_xml import *
 from libvirt_system.io import print_stderr
+from libvirt_system.task import Task
 
 
-
-# libvirt
 class LibvirtManager:
-    COMMAND_JSON_FIELD = 'libvirt_command'  # this is used in the json requests to write the task to be executed
-    ARGS_JSON_FIELD = 'libvirt_args'        # arguments for the command / function (kwargs or 'keyword args' are included here too)
 
-    def __int__(self, default_connection_uri = 'qemu:///system'):
-        self.Q = multiprocessing.SimpleQueue
+    def __init__(self, default_connection_uri='qemu:///system'):
+        self.q = multiprocessing.SimpleQueue
+        self.q_lock = multiprocessing.Lock()  # lock for synchronizing q
         self.default_connection_uri = default_connection_uri
         self.conn = self.create_connection_to_libvirt(default_connection_uri)
         if self.conn is None:
-            exit(1) # failed to make connection
+            exit(1)  # failed to make connection
 
-    @staticmethod
     def alert(self, source, message):
         """
         alerts the NAT with a message
         """
+        pass  # TODO: 🔴 define this method
 
     # libvrirt worker thread
-    def libvirt_worker(self, source, task : str, task_id=''):
+    def libvirt_worker(self, task: str):
         # TODO: complete conception here
         """
         :param source: the source, the sender of the task ~ (not yet defined)
@@ -35,21 +34,29 @@ class LibvirtManager:
         :return: nothing
         """
         # alert NAT
-        self.alert(source, f"task {task_id} is being processed ...")
+        task = Task(task)  # transform json into Task object
+        self.alert(task.source, f"task {task.task_id} is being processed ...")
         self.do_task(task)
         # alert NAT
-        self.alert(source, f"task {task_id} is done.")
+        self.alert(task.source, f"task {task.task_id} is done.")
+        # 🟢 check if there aren't any other tasks on the Queue
+        q = self.q
+        task = None
+        with self.q_lock:
+            if not q.empty():
+                task = q.get()
+        if task is not None:
+            self.libvirt_worker(task)
 
     # this maps all libvirt API methods to tasks
-    def do_task(self, task : str):
+    def do_task(self, task: Task):
         """
         executes json task
         :param task: json string encoding the task to be done
-        :return:
+        :return: ###
         """
-        task_dict = json_to_dict(task)
-        command = task_dict.get(LibvirtManager.COMMAND_JSON_FIELD)  # get the command
-        arguments = task_dict.get(LibvirtManager.ARGS_JSON_FIELD)   # get command args/kwargs
+        command = task.command  # get the command
+        arguments = task.args  # get command args/kwargs
         # ease of use
         conn = self.conn
         if command == 'open_connection':
@@ -60,13 +67,19 @@ class LibvirtManager:
         elif command == 'createXML':  # TODO: this part might need to be redone
             # createXMl command must have and argument called 'xml' that contains the json equivalent of the xml file
             xml = arguments['xml']  # TODO: make sure this is right
-            domain =  conn.createXML(xml)
+            domain = conn.createXML(xml)
             if domain is None:
-                print_stderr(f'failed to create domain from XML definition') # TODO: maybe be more descriptive here
+                print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
             else:
                 print_stderr(f'Guest {domain.name()} has booted.')
+            return domain
+
         elif command == 'defineXML':
-            return conn.defineXML(arguments['xml'])
+            domain = conn.defineXML(arguments['xml'])
+            if domain is None:
+                print_stderr(f'failed to define domain from XML definition')
+            else:
+                print_stderr(f'')
 
         elif command == '':
             pass
