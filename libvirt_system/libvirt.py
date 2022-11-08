@@ -1,5 +1,6 @@
 import threading
 import multiprocessing
+import libvirt
 from json_xml import *
 
 
@@ -50,3 +51,17 @@ class LibvirtManager:
             # TODO: create this if needed
             pass
         elif command == 'createXML':
+
+    def create_connection_to_libvrit(self, default_connection_uri):
+        """
+                Establishes connection and returns None if there's nothing to return
+                :param uri: connection
+                :return:
+                """
+        conn = libvirt.open(uri)
+        if conn is None:
+            print(f'Failed to open connection to {uri}', file=sys.stderr)
+            return None
+        print('Connection successful')
+        self.connections.append(conn)
+        return conn
