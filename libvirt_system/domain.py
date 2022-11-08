@@ -9,11 +9,11 @@ class Domain(virDomain):
     def get_info(self):
         info = self.info()
         if info is None:
-            print_stderr("can't get info of domain")
+            print_stderr(f"can't get info of domain {self.name()} {self.UUID()}")
         return info
 
     @staticmethod
-    def lookup_domain(connection, task: Task) -> Domain:
+    def lookup_domain(connection: libvirt.virConnect, task: Task) -> Domain:
         """
         lookup domain using ID, UUID or name,
         the lookup method must be specified in the task/request under 'lookup' field
@@ -26,21 +26,23 @@ class Domain(virDomain):
         :return: returns a virDomain object
         """
         lookup = task.get_or_error('lookup').lower()
-        domain: Domain
+        domain: Domain or None = None  # TODO: 🟢 learn trick
+        token = None
         if lookup == 'name':
-            x = name = task.get_or_error('name')
+            token = name = task.get_or_error('name')
             domain = connection.lookupByName(name)
-        elif lookup == 'uuid':
-            x = uuid = task.get_or_error('uuid')
+        elif lookup == 'uuid_string':  # example: 45e2aa3d-99fd-4994-a9b4-539414e62171
+            token = uuid_string = task.get_or_error('uuid_string')
+            domain = connection.lookupByUUIDString(uuid_string)
+        elif lookup == 'uuid':  # example b'E\xe2\xaa=\x99\xfdI\x94\xa9\xb4S\x94\x14\xe6!q'
+            token = uuid = task.get_or_error('uuid')
             domain = connection.lookupByUUID(uuid)
         elif lookup == 'id':
-            x = id_ = task.get_or_error('id')
+            token = id_ = task.get_or_error('id')
             domain = connection.lookupByID(id_)
-        # TODO: 🟡 maybe add UUIDString ?
         else:
-            raise UnrecognizedOption(f'lookup = {lookup} is not a valid/implemented option')
-
+            print_stderr(f'lookup = {lookup} is not a valid/implemented option')
         if domain is None:
-            raise Exception(f"domain {lookup}={x} does not exist, or lookup failed")
+            print_stderr(f"domain {lookup}={token} does not exist, or lookup failed")
         domain.__class__ = Domain  # cast class to Domain
         return domain

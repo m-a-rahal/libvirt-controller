@@ -92,6 +92,7 @@ class LibvirtManager:
             domain.suspend()
 
 
+
     @staticmethod
     def create_connection_to_libvirt(uri):
         """

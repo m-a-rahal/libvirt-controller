@@ -10,13 +10,19 @@ from json_xml import *
 def main():
     manager = LibvirtManager()
     conn = manager.connection
-    name = 'test'
-    domain = conn.lookupByName(name)
-    print(domain)
+    name = 'test_vm_1'
+    domain = conn.lookupByUUIDString('45e2aa3d-99fd-4994-a9b4-539414e62171')
+    print(domain.UUID())
     # create domain
-    domain.create()
+    if not domain.isActive():
+        domain.create()
     # is the domain running
     print(domain.isActive())
+    info = domain.info()
+    print(info)
+    domain2 = conn.lookupByUUIDString('45e2aa3d-99fd-4994-a9b4-539414e62171')
+    #if info.state == libvirt.VIR_DOMAIN_SHUTOFF_SAVED:
+    #    print()
     domain.suspend()
     # destroy
     domain.destroy()
@@ -32,7 +38,7 @@ def test1():
 def lookup_by_name(name='test_vm_1'):
     manager = LibvirtManager()
     conn = manager.connection
-    domain = conn.lookupByName(name)
+    domain = conn.lookupByUUIDString('45e2aa3d-99fd-4994-a9b4-539414e62171')
     print(domain)
     # create domain
     domain.create()

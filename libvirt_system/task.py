@@ -49,7 +49,8 @@ class Task(JsonDict):
     def command(self):
         return self.get(Task.COMMAND_JSON_FIELD)
 
+    @property
     def args(self) -> JsonDict:
         res = self.get(Task.ARGS_JSON_FIELD)
-        res.__class__ = JsonDict  # TODO: 🔴 TEST THIS, casting like that might cause errors (eg?: methods not copied)
+        res.__class__ = JsonDict  # Tested, might pose issue if you add extra attributes
         return res
