@@ -2,7 +2,17 @@ import random
 from json_xml import *
 
 
-class Task(dict):
+class JsonDict(dict):
+    def get_or_error(self, attribute, null_value=-1):
+        result = self.get(attribute, null_value)
+        if result == null_value:
+            # the value of the attribute might actually be equal to -1, so make sure the attribute really doesn't exist
+            if attribute not in self.keys():
+                raise AttributeError(f'attribute {attribute} not found')
+        return result
+
+
+class Task(JsonDict):
     """
     this class creates a task object that can be mapped to xml or json
     """
@@ -25,11 +35,13 @@ class Task(dict):
 
     @property
     def source(self):
+        # the source, the sender of the task ~ (not yet defined)
         # TODO: 🟠 implement this properly or delete it
         return self.get('source', 'unknown_source')
 
     @property
     def task_id(self):
+        # ID of the task ~ (not yet defined)
         # TODO: 🟠 implement this or delete it
         return self.get('task_id', random.randint(0, 10000))
 
@@ -37,5 +49,7 @@ class Task(dict):
     def command(self):
         return self.get(Task.COMMAND_JSON_FIELD)
 
-    def args(self):
-        return self.get(Task.ARGS_JSON_FIELD)
+    def args(self) -> JsonDict:
+        res = self.get(Task.ARGS_JSON_FIELD)
+        res.__class__ = JsonDict  # TODO: 🔴 TEST THIS, casting like that might cause errors (eg?: methods not copied)
+        return res

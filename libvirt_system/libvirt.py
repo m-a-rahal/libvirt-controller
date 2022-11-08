@@ -4,49 +4,54 @@ import multiprocessing
 import libvirt
 import sys
 from json_xml import *
-from libvirt_system.io import print_stderr
-from libvirt_system.task import Task
+from libvirt_system.domain import Domain
+from libvirt_system.exceptions import MissingAttributeError, UnrecognizedOption, print_stderr
+from libvirt_system.task import Task, JsonDict
 
 
 class LibvirtManager:
-
     def __init__(self, default_connection_uri='qemu:///system'):
-        self.q = multiprocessing.SimpleQueue
-        self.q_lock = multiprocessing.Lock()  # lock for synchronizing q
+        # task queue and workers
+        self.queue = multiprocessing.SimpleQueue
+        self.queue_lock = multiprocessing.Lock()  # lock for synchronizing q
+        self.active_workers = multiprocessing.Value('i', 0)
+        self.MAX_WORKERS = multiprocessing.Value('i', 4)  # Value('i', n) : 'i' means 'integer', and n is the value
+        # main connection
         self.default_connection_uri = default_connection_uri
-        self.conn = self.create_connection_to_libvirt(default_connection_uri)
-        if self.conn is None:
+        self.connection = self.create_connection_to_libvirt(default_connection_uri)
+        if self.connection is None:
             exit(1)  # failed to make connection
 
-    def alert(self, source, message):
+    @staticmethod
+    def alert(source, message):
         """
         alerts the NAT with a message
         """
         pass  # TODO: 🔴 define this method
 
-    # libvrirt worker thread
-    def libvirt_worker(self, task: str):
+    # libvirt main process/thread
+    def receive_task(self, task):
+        # if number of workers exceeded, put task in queue
+        # otherwise, create new process to handle task
+        pass
+
+    @staticmethod
+    def libvirt_worker(task: str, queue, lock):
         # TODO: complete conception here
-        """
-        :param source: the source, the sender of the task ~ (not yet defined)
-        :param task: json string of the task, retrieved from queue
-        :param task_id: ID of the task ~ (not yet defined)
-        :return: nothing
-        """
         # alert NAT
         task = Task(task)  # transform json into Task object
-        self.alert(task.source, f"task {task.task_id} is being processed ...")
-        self.do_task(task)
+        LibvirtManager.alert(task.source, f"task {task.task_id} is being processed ...")
+        # run the task
+        LibvirtManager.do_task(task)
         # alert NAT
-        self.alert(task.source, f"task {task.task_id} is done.")
+        LibvirtManager.alert(task.source, f"task {task.task_id} is done.")
         # 🟢 check if there aren't any other tasks on the Queue
-        q = self.q
         task = None
-        with self.q_lock:
-            if not q.empty():
-                task = q.get()
+        with lock:
+            if not queue.empty():
+                task = queue.get()
         if task is not None:
-            self.libvirt_worker(task)
+            LibvirtManager.libvirt_worker(task, queue, lock)
 
     # this maps all libvirt API methods to tasks
     def do_task(self, task: Task):
@@ -58,7 +63,7 @@ class LibvirtManager:
         command = task.command  # get the command
         arguments = task.args  # get command args/kwargs
         # ease of use
-        conn = self.conn
+        connection = self.connection
         if command == 'open_connection':
             # you may choose to create a new connection for some reason
             # you must have the name of the connection saved to pass it over for other commands
@@ -67,7 +72,7 @@ class LibvirtManager:
         elif command == 'createXML':  # TODO: this part might need to be redone
             # createXMl command must have and argument called 'xml' that contains the json equivalent of the xml file
             xml = arguments['xml']  # TODO: make sure this is right
-            domain = conn.createXML(xml)
+            domain = connection.createXML(xml)
             if domain is None:
                 print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
             else:
@@ -75,14 +80,17 @@ class LibvirtManager:
             return domain
 
         elif command == 'defineXML':
-            domain = conn.defineXML(arguments['xml'])
+            domain = connection.defineXML(arguments['xml'])
             if domain is None:
                 print_stderr(f'failed to define domain from XML definition')
             else:
                 print_stderr(f'')
 
-        elif command == '':
-            pass
+        elif command == 'domain_suspend':
+            domain = Domain.lookup_domain(self.connection, task)
+            domain.get_info()
+            domain.suspend()
+
 
     @staticmethod
     def create_connection_to_libvirt(uri):
@@ -91,9 +99,39 @@ class LibvirtManager:
         :param uri: connection
         :return:
         """
-        conn = libvirt.open(uri)
-        if conn is None:
+        connection = libvirt.open(uri)
+        if connection is None:
             print_stderr(f'Failed to open connection to {uri}')
             return None
         print_stderr('Connection successful')
-        return conn
+        return connection
+
+    def lookup_domain(self, task: Task) -> libvirt.virDomain:
+        """
+        lookup domain using ID, UUID or name,
+        the lookup method must be specified in the task/request under 'lookup' field
+        the identifier (name, id or UUID) must be present in the request as well:
+        examples:
+            task1 = {lookup : uuid, uuid : 156454-165454-....}
+            task2 = {lookup : name, name : user156_VM2}
+        :param task: a json like object of class Task
+        :return: returns a virDomain object
+        """
+        connection = self.connection
+        lookup = task.get_or_error('lookup').lower()
+        if lookup == 'name':
+            x = name = task.get_or_error('name')
+            domain = connection.lookupByName(name)
+        elif lookup == 'uuid':
+            x = uuid = task.get_or_error('uuid')
+            domain = connection.lookupByUUID(uuid)
+        elif lookup == 'id':
+            x = id_ = task.get_or_error('id')
+            domain = connection.lookupByID(id_)
+        # TODO: 🟡 maybe add UUIDString ?
+        else:
+            raise UnrecognizedOption(f'lookup = {lookup} is not a valid/implemented option')
+
+        if domain is None:
+            raise Exception(f"domain {lookup}={x} does not exist, or lookup failed")
+        return domain
