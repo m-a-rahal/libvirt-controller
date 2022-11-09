@@ -1,2 +1,4 @@
 .idea
 TO-DO
+venv
+**__pycache__
