@@ -65,55 +65,50 @@ class LibvirtManager:
         arguments = task.args  # get command args/kwargs
         # ease of use
         connection = self.connection
-        if command == Command.createXML:
+        # lookups
+        if command == Command.lookupByName:
+            lookupByName(connection, task)
+        if command == Command.lookupByID:
+            lookupByID(connection, task)
+        if command == Command.lookupByUUID:
+            lookupByUUID(connection, task)
+        if command == Command.lookupByUUIDString:
+            lookupByUUIDString(connection, task)
+        # open connection
+        if command == Command.open_connection:
             open_connection(task)
+        # domain state change commands
         elif command == Command.createXML:
             createXML(connection, task)
         elif command == Command.defineXML:
             defineXML(connection, task)
         elif command == Command.domain_suspend:
             domain_suspend(connection, task)
+        elif command == Command.domain_resume:
+            domain_resume(connection, task)
+        elif command == Command.domain_save:
+            domain_save(connection, task)
+        elif command == Command.domain_restore:
+            domain_restore(connection, task)
+        elif command == Command.domain_get_state:
+            domain_get_state(connection, task)
+        elif command == Command.domain_create:
+            domain_create(connection, task)
+        elif command == Command.domain_shutdown:
+            domain_shutdown(connection, task)
+        elif command == Command.domain_destroy:
+            domain_destroy(connection, task)
 
     @staticmethod
     def create_connection_to_libvirt(uri):
         """
         Establishes connection and returns None if there's nothing to return
         :param uri: connection
-        :return:
+        :return: connection object
         """
         connection = libvirt.open(uri)
         if connection is None:
             print_stderr(f'Failed to open connection to {uri}')
             return None
-        print_stderr('Connection successful', raise_exception=False)
+        print_stderr(f'Connection name={uri} successful', raise_exception=False)
         return connection
-
-    def lookup_domain(self, task: Task) -> libvirt.virDomain:
-        """
-        lookup domain using ID, UUID or name,
-        the lookup method must be specified in the task/request under 'lookup' field
-        the identifier (name, id or UUID) must be present in the request as well:
-        examples:
-            task1 = {lookup : uuid, uuid : 156454-165454-....}
-            task2 = {lookup : name, name : user156_VM2}
-        :param task: a json like object of class Task
-        :return: returns a virDomain object
-        """
-        connection = self.connection
-        domain = None
-        lookup = task.get_or_error('lookup').lower()
-        x = None
-        if lookup == 'name':
-            x = name = task.get_or_error('name')
-            domain = connection.lookupByName(name)
-        elif lookup == 'uuid':
-            x = uuid = task.get_or_error('uuid')
-            domain = connection.lookupByUUID(uuid)
-        elif lookup == 'id':
-            x = id_ = task.get_or_error('id')
-            domain = connection.lookupByID(id_)
-        else:
-            print_stderr(f'lookup = {lookup} is not a valid/implemented option')
-        if domain is None:
-            raise Exception(f"domain {lookup}={x} does not exist, or lookup failed")
-        return domain

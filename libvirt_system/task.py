@@ -3,12 +3,13 @@ from json_xml import *
 
 
 class JsonDict(dict):
-    def get_or_error(self, attribute, null_value=-1):
+    def get_or_error(self, attribute, context, null_value=-1):
+        # TODO: 🔴🔴🔴 add context to all occurrences of this function
         result = self.get(attribute, null_value)
         if result == null_value:
             # the value of the attribute might actually be equal to -1, so make sure the attribute really doesn't exist
             if attribute not in self.keys():
-                raise AttributeError(f'attribute {attribute} not found')
+                raise AttributeError(f"attribute '{attribute}' not found, context : {context}")
         return result
 
 

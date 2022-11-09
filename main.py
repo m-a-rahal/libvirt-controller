@@ -8,6 +8,15 @@ from json_xml import *
 
 
 def main():
+    test1()
+
+def test1():
+    with open('json_xml/examples/xmldoc_example.xml', 'r') as f:
+        xml = f.read()
+    obj = json_to_dict(xml_to_json(xml))
+    print(obj)
+
+def test2():
     manager = LibvirtManager()
     conn = manager.connection
     name = 'test_vm_1'
@@ -21,15 +30,6 @@ def main():
     domain.suspend()
     # destroy
     domain.destroy()
-    pass
-
-
-def test1():
-    with open('json_xml/examples/xmldoc_example.xml', 'r') as f:
-        xml = f.read()
-    obj = json_to_dict(xml_to_json(xml))
-    print(obj)
-
 
 def lookup_by_name(name='test_vm_1'):
     manager = LibvirtManager()
