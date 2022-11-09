@@ -1,13 +1,6 @@
-import random
-import threading
 import multiprocessing
-import libvirt
-import sys
-from json_xml import *
-from libvirt_system.domain import Domain
-from libvirt_system.exceptions import print_stderr
-from libvirt_system.task import Task, JsonDict
 from libvirt_system.commands import *
+from libvirt_system.exceptions import Position
 
 
 class LibvirtManager:
@@ -19,9 +12,18 @@ class LibvirtManager:
         self.MAX_WORKERS = multiprocessing.Value('i', 4)  # Value('i', n) : 'i' means 'integer', and n is the value
         # main connection
         self.default_connection_uri = default_connection_uri
-        self.connection = self.create_connection_to_libvirt(default_connection_uri)
-        if self.connection is None:
-            exit(1)  # failed to make connection
+
+    # 🌟 use context manager ('with' statement)  to make sure connection is closed at the end -----------------------
+    def __enter__(self, connection_uri: str or None = None):
+        # create connection
+        if not connection_uri:
+            connection_uri = self.default_connection_uri
+        self.connection = self.create_connection_to_libvirt(connection_uri)
+        return self.connection
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.connection.close()
+    # ----------------------------------------------------------------------------------------------------------
 
     @staticmethod
     def alert(source, message):
@@ -34,7 +36,10 @@ class LibvirtManager:
     def receive_task(self, task):
         # if number of workers exceeded, put task in queue
         # otherwise, create new process to handle task
-        pass
+        # for now, will simply call (do_task)
+        # TODO: properly implement task reception
+        print_stderr('request received', pos='first', context=task, raise_exception=False)
+        return self.do_task(task)
 
     @staticmethod
     def libvirt_worker(task: str, queue, lock):
@@ -68,14 +73,14 @@ class LibvirtManager:
         # lookups
         if command == Command.lookupByName:
             lookupByName(connection, task)
-        if command == Command.lookupByID:
+        elif command == Command.lookupByID:
             lookupByID(connection, task)
-        if command == Command.lookupByUUID:
+        elif command == Command.lookupByUUID:
             lookupByUUID(connection, task)
-        if command == Command.lookupByUUIDString:
+        elif command == Command.lookupByUUIDString:
             lookupByUUIDString(connection, task)
         # open connection
-        if command == Command.open_connection:
+        elif command == Command.open_connection:
             open_connection(task)
         # domain state change commands
         elif command == Command.createXML:
@@ -98,6 +103,8 @@ class LibvirtManager:
             domain_shutdown(connection, task)
         elif command == Command.domain_destroy:
             domain_destroy(connection, task)
+        else:
+            print_stderr(f'libvirt_command = "{command}" is not recognized!', pos=Position.last)
 
     @staticmethod
     def create_connection_to_libvirt(uri):
@@ -109,6 +116,5 @@ class LibvirtManager:
         connection = libvirt.open(uri)
         if connection is None:
             print_stderr(f'Failed to open connection to {uri}')
-            return None
         print_stderr(f'Connection name={uri} successful', raise_exception=False)
         return connection

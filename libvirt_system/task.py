@@ -24,7 +24,10 @@ class Task(JsonDict):
 
     def __init__(self, task_json):
         # init self with data from json
-        super().__init__(json_to_dict(task_json))
+        if isinstance(task_json, str):
+            super().__init__(json_to_dict(task_json))
+        elif isinstance(task_json, dict):
+            super(Task, self).__init__(task_json)
 
     @property
     def json(self):
@@ -52,6 +55,8 @@ class Task(JsonDict):
 
     @property
     def args(self) -> JsonDict:
-        res = self.get(Task.ARGS_JSON_FIELD)
-        res.__class__ = JsonDict  # Tested, might pose issue if you add extra attributes
-        return res
+        res = self.get(Task.ARGS_JSON_FIELD, None)
+        if res:
+            return JsonDict(res)
+        else:
+            return JsonDict()

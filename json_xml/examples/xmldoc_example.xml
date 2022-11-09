@@ -2,9 +2,9 @@
 <domain type="kvm">
   <name>new_domain</name>
   <title></title>
-  <memory>500</memory>
-  <currentMemory>500</currentMemory>
-  <uuid></uuid>
+  <memory>50</memory>
+  <currentMemory>50</currentMemory>
+  <!--uuid></uuid-->
   <vcpu>1</vcpu>
   <os>
     <type arch="x86_64" machine="pc-i440fx-jammy">hvm</type>
