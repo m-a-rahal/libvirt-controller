@@ -5,7 +5,7 @@ import libvirt
 import sys
 from json_xml import *
 from libvirt_system.domain import Domain
-from libvirt_system.exceptions import MissingAttributeError, UnrecognizedOption, print_stderr
+from libvirt_system.exceptions import print_stderr
 from libvirt_system.task import Task, JsonDict
 
 
@@ -76,7 +76,7 @@ class LibvirtManager:
             if domain is None:
                 print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
             else:
-                print_stderr(f'Guest {domain.name()} has booted.')
+                print_stderr(f'Guest {domain.name()} has booted.', raise_exception=False)
             return domain
 
         elif command == 'defineXML':
@@ -84,13 +84,12 @@ class LibvirtManager:
             if domain is None:
                 print_stderr(f'failed to define domain from XML definition')
             else:
-                print_stderr(f'')
+                print_stderr(f'Guest {domain.name()} successfully defined.', raise_exception=False)
 
         elif command == 'domain_suspend':
             domain = Domain.lookup_domain(self.connection, task)
-            domain.get_info()
+            state, reason = domain.state()
             domain.suspend()
-
 
 
     @staticmethod
@@ -104,7 +103,7 @@ class LibvirtManager:
         if connection is None:
             print_stderr(f'Failed to open connection to {uri}')
             return None
-        print_stderr('Connection successful')
+        print_stderr('Connection successful', raise_exception=False)
         return connection
 
     def lookup_domain(self, task: Task) -> libvirt.virDomain:
@@ -119,6 +118,7 @@ class LibvirtManager:
         :return: returns a virDomain object
         """
         connection = self.connection
+        domain = None
         lookup = task.get_or_error('lookup').lower()
         if lookup == 'name':
             x = name = task.get_or_error('name')
@@ -129,10 +129,8 @@ class LibvirtManager:
         elif lookup == 'id':
             x = id_ = task.get_or_error('id')
             domain = connection.lookupByID(id_)
-        # TODO: 🟡 maybe add UUIDString ?
         else:
-            raise UnrecognizedOption(f'lookup = {lookup} is not a valid/implemented option')
-
+            print_stderr(f'lookup = {lookup} is not a valid/implemented option')
         if domain is None:
             raise Exception(f"domain {lookup}={x} does not exist, or lookup failed")
         return domain

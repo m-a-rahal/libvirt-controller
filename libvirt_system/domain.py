@@ -1,11 +1,25 @@
 from __future__ import annotations
 from libvirt import virDomain
-from libvirt_system.exceptions import print_stderr, UnrecognizedOption
+from libvirt_system.exceptions import print_stderr
 from libvirt_system.task import Task
 import libvirt
+from enum import Enum
+
+
+class DOMAIN_STATES(Enum):  # TODO: 🍀 learn enums
+    VIR_DOMAIN_NOSTATE = 0
+    VIR_DOMAIN_RUNNING = 1
+    VIR_DOMAIN_BLOCKED = 2
+    VIR_DOMAIN_PAUSED = 3
+    VIR_DOMAIN_SHUTDOWN = 4
+    VIR_DOMAIN_SHUTOFF = 5
+    VIR_DOMAIN_CRASHED = 6
+    VIR_DOMAIN_PMSUSPENDED = 7
 
 
 class Domain(virDomain):
+    states = DOMAIN_STATES
+
     def get_info(self):
         info = self.info()
         if info is None:
@@ -26,7 +40,7 @@ class Domain(virDomain):
         :return: returns a virDomain object
         """
         lookup = task.get_or_error('lookup').lower()
-        domain: Domain or None = None  # TODO: 🟢 learn trick
+        domain: Domain or None = None  # TODO: 🍀 learn trick
         token = None
         if lookup == 'name':
             token = name = task.get_or_error('name')
@@ -46,3 +60,14 @@ class Domain(virDomain):
             print_stderr(f"domain {lookup}={token} does not exist, or lookup failed")
         domain.__class__ = Domain  # cast class to Domain
         return domain
+
+    # get state
+    def get_state(self) -> int:
+        state, reason = self.state()
+        # if state in domain state accepted values #TODO: 🍀 learn trick : Enums
+        if state in DOMAIN_STATES._value2member_map_:
+            print_stderr(f'state = {DOMAIN_STATES(state).name}', raise_exception=False)
+            return state
+        else:
+            print_stderr(f'The state is unknown. reason code = {reason}')
+        return -1

@@ -11,18 +11,13 @@ def main():
     manager = LibvirtManager()
     conn = manager.connection
     name = 'test_vm_1'
-    domain = conn.lookupByUUIDString('45e2aa3d-99fd-4994-a9b4-539414e62171')
-    print(domain.UUID())
+    uuid_str = '45e2aa3d-99fd-4994-a9b4-539414e62171'
+    domain = conn.lookupByUUIDString(uuid_str)
     # create domain
     if not domain.isActive():
         domain.create()
-    # is the domain running
-    print(domain.isActive())
-    info = domain.info()
-    print(info)
-    domain2 = conn.lookupByUUIDString('45e2aa3d-99fd-4994-a9b4-539414e62171')
-    #if info.state == libvirt.VIR_DOMAIN_SHUTOFF_SAVED:
-    #    print()
+    state, reason = domain.state()
+    print(f'state : {state}')
     domain.suspend()
     # destroy
     domain.destroy()
@@ -34,6 +29,7 @@ def test1():
         xml = f.read()
     obj = json_to_dict(xml_to_json(xml))
     print(obj)
+
 
 def lookup_by_name(name='test_vm_1'):
     manager = LibvirtManager()
