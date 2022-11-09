@@ -7,6 +7,7 @@ from json_xml import *
 from libvirt_system.domain import Domain
 from libvirt_system.exceptions import print_stderr
 from libvirt_system.task import Task, JsonDict
+from libvirt_system.commands import *
 
 
 class LibvirtManager:
@@ -60,37 +61,18 @@ class LibvirtManager:
         :param task: json string encoding the task to be done
         :return: ###
         """
-        command = task.command  # get the command
+        command = Command.parse(task.command)  # get the command
         arguments = task.args  # get command args/kwargs
         # ease of use
         connection = self.connection
-        if command == 'open_connection':
-            # you may choose to create a new connection for some reason
-            # you must have the name of the connection saved to pass it over for other commands
-            # TODO: create this if needed
-            pass
-        elif command == 'createXML':  # TODO: this part might need to be redone
-            # createXMl command must have and argument called 'xml' that contains the json equivalent of the xml file
-            xml = arguments['xml']  # TODO: make sure this is right
-            domain = connection.createXML(xml)
-            if domain is None:
-                print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
-            else:
-                print_stderr(f'Guest {domain.name()} has booted.', raise_exception=False)
-            return domain
-
-        elif command == 'defineXML':
-            domain = connection.defineXML(arguments['xml'])
-            if domain is None:
-                print_stderr(f'failed to define domain from XML definition')
-            else:
-                print_stderr(f'Guest {domain.name()} successfully defined.', raise_exception=False)
-
-        elif command == 'domain_suspend':
-            domain = Domain.lookup_domain(self.connection, task)
-            state, reason = domain.state()
-            domain.suspend()
-
+        if command == Command.createXML:
+            open_connection(task)
+        elif command == Command.createXML:
+            createXML(connection, task)
+        elif command == Command.defineXML:
+            defineXML(connection, task)
+        elif command == Command.domain_suspend:
+            domain_suspend(connection, task)
 
     @staticmethod
     def create_connection_to_libvirt(uri):
@@ -120,6 +102,7 @@ class LibvirtManager:
         connection = self.connection
         domain = None
         lookup = task.get_or_error('lookup').lower()
+        x = None
         if lookup == 'name':
             x = name = task.get_or_error('name')
             domain = connection.lookupByName(name)

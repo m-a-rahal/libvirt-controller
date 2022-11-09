@@ -6,7 +6,7 @@ import libvirt
 from enum import Enum
 
 
-class DOMAIN_STATES(Enum):  # TODO: 🍀 learn enums
+class DOMAIN_STATE(Enum):  # TODO: 🍀 learn enums
     VIR_DOMAIN_NOSTATE = 0
     VIR_DOMAIN_RUNNING = 1
     VIR_DOMAIN_BLOCKED = 2
@@ -16,9 +16,13 @@ class DOMAIN_STATES(Enum):  # TODO: 🍀 learn enums
     VIR_DOMAIN_CRASHED = 6
     VIR_DOMAIN_PMSUSPENDED = 7
 
-
 class Domain(virDomain):
-    states = DOMAIN_STATES
+    states = DOMAIN_STATE
+
+    @staticmethod
+    def cast(domain: Domain):  # TODO: 🍀 learn trick, casting (don't cast unless you know what you're doing)
+        domain.__class__ = Domain
+        return domain
 
     def get_info(self):
         info = self.info()
@@ -58,16 +62,19 @@ class Domain(virDomain):
             print_stderr(f'lookup = {lookup} is not a valid/implemented option')
         if domain is None:
             print_stderr(f"domain {lookup}={token} does not exist, or lookup failed")
-        domain.__class__ = Domain  # cast class to Domain
-        return domain
+        return Domain.cast(domain)  # cast class to Domain
 
     # get state
-    def get_state(self) -> int:
+    def get_state(self) -> DOMAIN_STATE or None:
+        """
+        returns domain state, might raise exception if info can't be obtained
+        :return: domain state
+        """
         state, reason = self.state()
         # if state in domain state accepted values #TODO: 🍀 learn trick : Enums
-        if state in DOMAIN_STATES._value2member_map_:
-            print_stderr(f'state = {DOMAIN_STATES(state).name}', raise_exception=False)
-            return state
+        if state in DOMAIN_STATE._value2member_map_:
+            print_stderr(f'state = {DOMAIN_STATE(state).name}', raise_exception=False)
+            return DOMAIN_STATE(state)
         else:
             print_stderr(f'The state is unknown. reason code = {reason}')
-        return -1
+        return None
