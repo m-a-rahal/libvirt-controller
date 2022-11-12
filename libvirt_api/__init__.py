@@ -1,6 +1,12 @@
 import multiprocessing
-from libvirt_system.commands import *
-from libvirt_system.exceptions import Position
+
+from libvirt_api.commands import *
+from libvirt_api.exceptions import Position, print_stderr
+from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
+from pycsp.parallel import *
+
+@process
+
 
 
 class LibvirtManager:
@@ -45,22 +51,24 @@ class LibvirtManager:
     def libvirt_worker(task: str, queue, lock):
         # TODO: complete conception here
         # alert NAT
-        task = Task(task)  # transform json into Task object
-        LibvirtManager.alert(task.source, f"task {task.task_id} is being processed ...")
-        # run the task
-        LibvirtManager.do_task(task)
-        # alert NAT
-        LibvirtManager.alert(task.source, f"task {task.task_id} is done.")
-        # 🟢 check if there aren't any other tasks on the Queue
-        task = None
-        with lock:
-            if not queue.empty():
-                task = queue.get()
-        if task is not None:
-            LibvirtManager.libvirt_worker(task, queue, lock)
+        task = JsonXmlDict(task)  # transform json into Task object
+        manager = LibvirtManager()
+        with manager:
+            manager.alert(task.source, f"task {task.task_id} is being processed ...")
+            # run the task
+            manager.do_task(task)
+            # alert NAT
+            manager.alert(task.source, f"task {task.task_id} is done.")
+            # 🟢 check if there aren't any other tasks on the Queue
+            task = None
+            with lock:
+                if not queue.empty():
+                    task = queue.get()
+            if task is not None:
+                manager.libvirt_worker(task, queue, lock)
 
     # this maps all libvirt API methods to tasks
-    def do_task(self, task: Task):
+    def do_task(self, task: JsonXmlDict):
         """
         executes json task
         :param task: json string encoding the task to be done

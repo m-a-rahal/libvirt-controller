@@ -1,4 +1,5 @@
 import json
+
 import xmltodict
 
 # JSON, XML to intermediate encoding (dictionary)

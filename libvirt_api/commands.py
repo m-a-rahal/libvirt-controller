@@ -1,13 +1,11 @@
 from __future__ import annotations
-
-import traceback
 from enum import Enum, auto
-
-from libvirt_system.domain import get_state
-from libvirt_system.task import Task
-from libvirt import virDomain, virConnect
-from libvirt_system.exceptions import print_stderr, print_info, Position
 import libvirt
+from libvirt import virDomain, virConnect
+
+from libvirt_api.domain import get_state
+from libvirt_api.exceptions import print_stderr, print_info, Position
+from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
 
 # NOTE: 🟩 means implemented, 🔗 means linked to 'switch-case' statements
@@ -42,7 +40,7 @@ class Command(Enum):
         return cls._member_map_.get(command_str, None)
 
 
-def lookupByName(connection: virConnect, task: Task):
+def lookupByName(connection: virConnect, task: JsonXmlDict):
     x = task.args.get_or_error('name', context=f'lookupByName(name)')
     domain = connection.lookupByName(x)
     if domain is None:
@@ -50,7 +48,7 @@ def lookupByName(connection: virConnect, task: Task):
     return domain
 
 
-def lookupByID(connection: virConnect, task: Task):
+def lookupByID(connection: virConnect, task: JsonXmlDict):
     x = task.args.get_or_error(id, context=f'lookupByID(id)')
     domain = connection.lookupByID(x)
     if domain is None:
@@ -58,7 +56,7 @@ def lookupByID(connection: virConnect, task: Task):
     return domain
 
 
-def lookupByUUID(connection: virConnect, task: Task):
+def lookupByUUID(connection: virConnect, task: JsonXmlDict):
     x = task.args.get_or_error('uuid', context=f'lookupByUUID(uuid)')
     domain = connection.lookupByUUID(x)
     if domain is None:
@@ -66,7 +64,7 @@ def lookupByUUID(connection: virConnect, task: Task):
     return domain
 
 
-def lookupByUUIDString(connection: virConnect, task: Task):
+def lookupByUUIDString(connection: virConnect, task: JsonXmlDict):
     x = task.args.get_or_error('uuidstr', context=f'lookupByUUIDString(uuidstr)')
     domain = connection.lookupByUUIDString(x)
     if domain is None:
@@ -74,7 +72,7 @@ def lookupByUUIDString(connection: virConnect, task: Task):
     return domain
 
 
-def get_new_state(domain: virDomain, connection: virConnect, task: Task):
+def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict):
     state = None
     try:
         state = get_state(domain).name
@@ -84,30 +82,30 @@ def get_new_state(domain: virDomain, connection: virConnect, task: Task):
     return state
 
 
-def domain_destroy(connection: virConnect, task: Task):
+def domain_destroy(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.destroy()
     return get_new_state(domain, connection, task)
 
 
-def domain_shutdown(connection: virConnect, task: Task):
+def domain_shutdown(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.shutdown()
     return get_new_state(domain, connection, task)
 
-def domain_create(connection: virConnect, task: Task):
+def domain_create(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.create()
     return get_new_state(domain, connection, task)
 
 
-def domain_restore(connection: virConnect, task: Task):
+def domain_restore(connection: virConnect, task: JsonXmlDict):
     frm = task.args.get_or_error('frm', context='domain_restore(frm)')  # restore from file
     domain = connection.restore(frm)
     return get_new_state(domain, connection, task)  # TODO: 🔴💥 what does 'restore' return? check result, if None etc.
 
 
-def domain_save(connection: virConnect, task: Task):
+def domain_save(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     to = task.args.get_or_error('to', context='domain_save(to)')
     domain.save(to)
@@ -122,23 +120,23 @@ def domain_save(connection: virConnect, task: Task):
             raise e
 
 
-def domain_resume(connection: virConnect, task: Task):
+def domain_resume(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.resume()
     return get_new_state(domain, connection, task)
 
 
-def domain_get_state(connection: virConnect, task: Task) -> str:
+def domain_get_state(connection: virConnect, task: JsonXmlDict) -> str:
     domain = lookup_domain(connection, task)
     return get_state(domain).name
 
 
-def domain_suspend(connection: virConnect, task: Task):
+def domain_suspend(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.suspend()
     return get_new_state(domain, connection, task)
 
-def open_connection(task: Task):
+def open_connection(task: JsonXmlDict):
     # TODO: 🟢 create this if needed
     name = task.args.get_or_error('name', context='open_connection(name) / libvirt.open(name) / name ~ uri, eg: name = '
                                                   '"qemu:///system"')
@@ -149,7 +147,7 @@ def open_connection(task: Task):
     return connection
 
 
-def createXML(connection: virConnect, task: Task) -> virDomain:
+def createXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
     """
     calls libvirt.createXML(xmlDesc, flags)
     :param task: fields: xmlDesc (required), flags (not required)
@@ -168,7 +166,7 @@ def createXML(connection: virConnect, task: Task) -> virDomain:
     return get_new_state(domain, connection, task)
 
 
-def defineXML(connection: virConnect, task: Task) -> virDomain:
+def defineXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
     args = task.args
     domain = connection.defineXML(args.get_or_error('xml', context='defineXML(xml)'))
     if domain is None:
@@ -179,7 +177,7 @@ def defineXML(connection: virConnect, task: Task) -> virDomain:
     return get_new_state(domain, connection, task)
 
 
-def lookup_domain(connection: libvirt.virConnect, task: Task, silent=False) -> virDomain:
+def lookup_domain(connection: libvirt.virConnect, task: JsonXmlDict, silent=False) -> virDomain:
     """
     lookup domain using ID, UUID or name,
     the lookup method must be specified in the task/request under 'lookup' field

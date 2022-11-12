@@ -1,30 +1,28 @@
-# dependencies : xmltodict 0.13
 from __future__ import print_function
-from json_xml import *
-from libvirt_system.commands import *
-from libvirt_system.libvirt_sys import LibvirtManager
-import traceback
-
+from libvirt_api.commands import *
+from libvirt_api import LibvirtManager
+from libvirt_api.json_xml import *
 
 
 def main():
-    # testing connection
+    # test connection
     manager = LibvirtManager('qemu:///system')
     # use this statement to always close connection at the end
     with manager as connection:
-        # testing domain creation
+        # test domain creation
         for task in protocol_tasks(name='new_test_vm_100', memory='10'):
             try:
                 print_info(f'\n>>> running task: {task["libvirt_command"]}')
                 domain = manager.receive_task(task)
             except Exception as e:
-                print(traceback.format_exc())
+                print_stderr(e, context="error", raise_exception=False)
+
 
 def protocol_tasks(**kwargs):
     docDesc = get_prop_xml(**kwargs)
     protocol = [
         # create VM from XML
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'createXML',
             'libvirt_args': {
                 'xmlDesc': docDesc,
@@ -32,21 +30,21 @@ def protocol_tasks(**kwargs):
             }
         }),
         # pause VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_suspend',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # resume VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_resume',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # save VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_save',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
@@ -54,7 +52,7 @@ def protocol_tasks(**kwargs):
             }
         }),
         # restore VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_restore',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
@@ -62,42 +60,42 @@ def protocol_tasks(**kwargs):
             }
         }),
         # shutdown VM (doesn't work without OS)
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_shutdown',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # destroy VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_destroy',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # define VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'defineXML',
             'libvirt_args': {
                 'xml': docDesc,
             }
         }),
         # start/create VM
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'domain_create',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # lookup VM (by name)
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'lookupByName',
             'libvirt_args': {
                 'name': 'new_test_vm_100',
             }
         }),
         # lookup by UUID string
-        Task({
+        JsonXmlDict({
             'libvirt_command': 'lookupByUUIDString',
             'libvirt_args': {
                 'uuidstr': '07aea90a-ad87-4480-b6e2-c2d3bc5ed4ee',
@@ -106,14 +104,16 @@ def protocol_tasks(**kwargs):
     ]
     return protocol
 
+
 def get_prop_xml(**kwargs):
-    with open('json_xml/examples/xmldoc_example.xml', 'r') as f:
+    with open('libvirt_api/json_xml/examples/xmldoc_example.xml', 'r') as f:
         doc = f.read()
-    doc = Task(xml_to_dict(doc))
+    doc = JsonXmlDict(xml_to_dict(doc))
     domain = doc['domain']
     for k, v in kwargs.items():
         domain[k] = v
     return doc.xml
+
 
 def test2():
     manager = LibvirtManager()
@@ -129,6 +129,7 @@ def test2():
     domain.suspend()
     # destroy
     domain.destroy()
+
 
 def lookup_by_name(name='test_vm_1'):
     manager = LibvirtManager()
