@@ -59,7 +59,6 @@ def lookupByID(connection: virConnect, task: Task):
 
 
 def lookupByUUID(connection: virConnect, task: Task):
-    attribute = 'uuid'
     x = task.args.get_or_error('uuid', context=f'lookupByUUID(uuid)')
     domain = connection.lookupByUUID(x)
     if domain is None:
