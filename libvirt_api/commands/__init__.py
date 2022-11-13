@@ -1,75 +1,48 @@
 from __future__ import annotations
-from enum import Enum, auto
 import libvirt
 from libvirt import virDomain, virConnect
+from enum import Enum
 
-from libvirt_api.domain import get_state
+from libvirt_api.commands.function_enum import FunctionEnum
+from libvirt_api.domain import get_state, get_info
 from libvirt_api.exceptions import print_stderr, print_info, Position
 from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
 
-# NOTE: 🟩 means implemented, 🔗 means linked to 'switch-case' statements
-# TODO: 🔴[📨response] These command's return won't be use, so instead send responses with 'position: "final"'
-# TODO: 🔴[📨response] each response must identify the destination, so include that somewhere somehow
-class Command(Enum):
-    # lookups
-    lookupByName = auto()  # 🟩🔗
-    lookupByID = auto()  # 🟩🔗
-    lookupByUUIDString = auto()  # 🟩🔗
-    lookupByUUID = auto()  # 🟩🔗
-    # connection
-    open_connection = auto()  # 🟩🔗
-    # domain get state
-    domain_get_state = auto()  # 🟩🔗
-    # domain (VM) state change, TODO: 🔴[📨response] all these must respond with new domain info (or error)
-    defineXML = auto()  # 🟩🔗 define + RUN domain
-    createXML = auto()  # 🟩🔗 define domain
-    domain_suspend = auto()  # 🟩🔗 suspend domain
-    domain_resume = auto()  # 🟩🔗 resume domain
-    domain_save = auto()  # 🟩🔗 save domain
-    domain_restore = auto()  # 🟩🔗restore saved domain
-    domain_create = auto()  # 🟩🔗 start a defined domain
-    domain_shutdown = auto()  # 🟩🔗 shutdown domain
-    domain_destroy = auto()  # 🟩🔗 destroy domain
-
-    # TODO: 🟡 are there other state changes ?
-
-    @classmethod
-    def parse(cls, command_str) -> Command or None:
-        """returns enum for provided command string, or None"""
-        return cls._member_map_.get(command_str, None)
-
-
 def lookupByName(connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error('name', context=f'lookupByName(name)')
-    domain = connection.lookupByName(x)
-    if domain is None:
-        print_stderr(f"domain name={x} does not exist, or lookup failed")
-    return domain
-
-
-def lookupByID(connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error(id, context=f'lookupByID(id)')
-    domain = connection.lookupByID(x)
-    if domain is None:
-        print_stderr(f"domain id={x} does not exist, or lookup failed")
-    return domain
-
+    return _lookup(LookupType.name, connection, task)
 
 def lookupByUUID(connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error('uuid', context=f'lookupByUUID(uuid)')
-    domain = connection.lookupByUUID(x)
+    return _lookup(LookupType.uuid, connection, task)
+
+def lookupByID(connection: virConnect, task: JsonXmlDict):
+    return _lookup(LookupType.id, connection, task)
+
+
+def _lookup(by: LookupType, connection: virConnect, task: JsonXmlDict):
+    x = task.args.get_or_error(by.name, context=f'lookupByName({by.name})')
+    # call specified lookup function
+    domain:virDomain = by.value(connection, x)
+    if domain is None:
+        print_stderr(f"domain name={x} does not exist, or lookup failed")
+    else:
+        print_info(f'Domain found :\n\tname={domain.name()}, uuid={domain.UUIDString()}, id={domain.ID()}')
+        print_info(f'\tdomain state = {get_state(domain).name}')
+    return domain
+
+
+def _lookupByUUID(connection: virConnect, task: JsonXmlDict):
+    x = task.args.get_or_error('uuid', context=f'lookupByUUIDString(uuid)')
+    domain = connection.lookupByUUIDString(x)
     if domain is None:
         print_stderr(f"domain uuid={x} does not exist, or lookup failed")
     return domain
 
 
-def lookupByUUIDString(connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error('uuidstr', context=f'lookupByUUIDString(uuidstr)')
-    domain = connection.lookupByUUIDString(x)
-    if domain is None:
-        print_stderr(f"domain uuidstr={x} does not exist, or lookup failed")
-    return domain
+class LookupType(Enum):
+    name = FunctionEnum(virConnect.lookupByName)
+    id = FunctionEnum(virConnect.lookupByID)
+    uuid = FunctionEnum(virConnect.lookupByUUIDString)
 
 
 def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict):
@@ -92,6 +65,7 @@ def domain_shutdown(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     domain.shutdown()
     return get_new_state(domain, connection, task)
+
 
 def domain_create(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
@@ -136,6 +110,7 @@ def domain_suspend(connection: virConnect, task: JsonXmlDict):
     domain.suspend()
     return get_new_state(domain, connection, task)
 
+
 def open_connection(task: JsonXmlDict):
     # TODO: 🟢 create this if needed
     name = task.args.get_or_error('name', context='open_connection(name) / libvirt.open(name) / name ~ uri, eg: name = '
@@ -162,7 +137,7 @@ def createXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
     if domain is None:
         print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
     else:
-        print_stderr(f'Guest {domain.name()} has booted.', raise_exception=False)
+        print_info(f'Guest {domain.name()} has booted.')
     return get_new_state(domain, connection, task)
 
 
@@ -177,7 +152,7 @@ def defineXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
     return get_new_state(domain, connection, task)
 
 
-def lookup_domain(connection: libvirt.virConnect, task: JsonXmlDict, silent=False) -> virDomain:
+def lookup_domain(connection: libvirt.virConnect, task: JsonXmlDict) -> virDomain:
     """
     lookup domain using ID, UUID or name,
     the lookup method must be specified in the task/request under 'lookup' field
@@ -195,11 +170,6 @@ def lookup_domain(connection: libvirt.virConnect, task: JsonXmlDict, silent=Fals
         domain = lookupByID(connection, task)
     elif 'uuid' in args:
         domain = lookupByUUID(connection, task)
-    elif 'uuidstr' in args:
-        domain = lookupByUUIDString(connection, task)
     elif 'name' in args:
         domain = lookupByName(connection, task)
-    if not silent:
-        print_info(
-            f'Domain found : name={domain.name()}, uuidstr={domain.UUIDString()}, id={domain.ID()}, uuid={domain.UUID()}')
     return domain  # cast class to Domain

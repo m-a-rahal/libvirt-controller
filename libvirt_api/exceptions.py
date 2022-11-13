@@ -15,7 +15,7 @@ def print_info(msg, pos: Position = Position.middle, context=None):
 
 def print_stderr(msg, raise_exception=True, pos: Position = Position.middle, context=None):
     # TODO: 🔴 implement messaging ! add context, type, position and maybe other structural information like {domain:
-    #  {uuidstr: 64546468-154648-154687-1546877}}
+    #  {uuid: 64546468-154648-154687-1546877}}
     print(msg, file=sys.stderr)
     if raise_exception:
         raise Exception(msg)

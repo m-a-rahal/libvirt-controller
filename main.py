@@ -96,9 +96,9 @@ def protocol_tasks(**kwargs):
         }),
         # lookup by UUID string
         JsonXmlDict({
-            'libvirt_command': 'lookupByUUIDString',
+            'libvirt_command': 'lookupByUUID',
             'libvirt_args': {
-                'uuidstr': '07aea90a-ad87-4480-b6e2-c2d3bc5ed4ee',
+                'uuid': '07aea90a-ad87-4480-b6e2-c2d3bc5ed4ee',
             }
         }),
     ]

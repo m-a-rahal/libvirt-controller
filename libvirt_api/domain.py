@@ -1,9 +1,6 @@
 from __future__ import annotations
-
 from enum import Enum
-
 from libvirt import virDomain
-
 from libvirt_api.exceptions import print_stderr
 
 

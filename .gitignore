@@ -3,6 +3,7 @@ TO-DO
 venv
 **__pycache__ 
 random_file
+other/untracked
 # to remove undesired tracked files, use git rm --cached <file>
 # to remove all files under directory, add -r option :
 #   git rm -r --cached <folder path>
