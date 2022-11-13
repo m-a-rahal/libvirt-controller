@@ -1,4 +1,4 @@
-from json_xml import *
+from libvirt_api.json_xml import *
 # definitions
 XML = 0
 JSON = 1

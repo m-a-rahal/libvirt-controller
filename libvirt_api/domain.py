@@ -1,12 +1,10 @@
 from __future__ import annotations
-from libvirt import virDomain
-from libvirt_system.exceptions import print_stderr
-from libvirt_system.task import Task
-import libvirt
 from enum import Enum
+from libvirt import virDomain
+from libvirt_api.exceptions import print_stderr
 
 
-class DOMAIN_STATE(Enum):  # TODO: 🍀 learn enums
+class DOMAIN_STATE(Enum):
     VIR_DOMAIN_NOSTATE = 0
     VIR_DOMAIN_RUNNING = 1
     VIR_DOMAIN_BLOCKED = 2
@@ -15,6 +13,7 @@ class DOMAIN_STATE(Enum):  # TODO: 🍀 learn enums
     VIR_DOMAIN_SHUTOFF = 5
     VIR_DOMAIN_CRASHED = 6
     VIR_DOMAIN_PMSUSPENDED = 7
+
 
 def get_info(domain: virDomain):
     info = domain.info()
