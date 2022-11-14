@@ -60,7 +60,7 @@ class TestCommands(unittest.TestCase):
                 print('testing on example', i)
                 # call createXMl
                 command = Command.createXML.json(xmlDesc=xml_desc_example, flags=0)
-                domain = self.manager.receive_task(command)
+                domain: virDomain = self.manager.receive_task(command)
                 # testing
                 # is domain good None ? and is it good type
                 self.assertIsNotNone(domain, f"domain = None (failed to create) after createXMl with example {i}")
@@ -72,6 +72,9 @@ class TestCommands(unittest.TestCase):
                 # assert that created VM has same description as intended
                 self.assertTrue(domain_matches_xmlDesc(domain, xml_desc_example), "VM has different description than "
                                                                                   "described in XML creation command")
+                # destroy test domain
+                print('deleting test domain')
+                domain.destroy()
 
     def test_domain_suspend(self):
         pass
