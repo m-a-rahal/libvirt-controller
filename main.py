@@ -1,7 +1,10 @@
 from __future__ import print_function
+
+import traceback
+
 from libvirt_api.commands import *
 from libvirt_api import LibvirtManager
-from libvirt_api.json_xml import *
+from test import load_xml_example
 
 
 def main():
@@ -10,17 +13,28 @@ def main():
     # use this statement to always close connection at the end
     with manager as connection:
         # test domain creation
-        for task in protocol_tasks(name='new_test_vm_100', memory='10'):
+        for task in protocol_alpine_shutdown(name='new_test_vm_100', memory='10'):
             try:
                 print_info(f'\n>>> running task: {task["libvirt_command"]}')
                 domain = manager.receive_task(task)
             except Exception as e:
                 print_stderr(e, context="error", raise_exception=False)
+                print(traceback.format_exc())
 
+def protocol_alpine_shutdown(**kwargs):
+    docDesc = load_xml_example(**kwargs)
+    return [
+        JsonXmlDict({
+            'libvirt_command': 'domain_shutdown',
+            'libvirt_args': {
+                'name': 'alpinelinux3.15',
+            }
+        })
+    ]
 
 def protocol_tasks(**kwargs):
-    docDesc = get_prop_xml(**kwargs)
-    protocol = [
+    docDesc = load_xml_example(**kwargs)
+    return [
         # create VM from XML
         JsonXmlDict({
             'libvirt_command': 'createXML',
@@ -102,17 +116,6 @@ def protocol_tasks(**kwargs):
             }
         }),
     ]
-    return protocol
-
-
-def get_prop_xml(**kwargs):
-    with open('libvirt_api/json_xml/examples/xmldoc_example.xml', 'r') as f:
-        doc = f.read()
-    doc = JsonXmlDict(xml_to_dict(doc))
-    domain = doc['domain']
-    for k, v in kwargs.items():
-        domain[k] = v
-    return doc.xml
 
 
 def test2():
