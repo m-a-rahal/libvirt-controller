@@ -5,8 +5,8 @@ from datetime import datetime
 from libvirt_api import JsonXmlDict, xml_to_dict
 
 
-def load_xml_example(**kwargs: object) -> str:
-    with open('libvirt_api/json_xml/examples/xmldoc_example.xml', 'r') as f:
+def load_xml_example(src_file='tests/examples/xmldoc_example.xml', **kwargs: object) -> str:
+    with open(src_file, 'r') as f:
         doc = f.read()
     dic = JsonXmlDict(xml_to_dict(doc))
     domain = dic['domain']
@@ -16,7 +16,7 @@ def load_xml_example(**kwargs: object) -> str:
 
 
 def load_xml_examples():
-    # TODO: add more examples to test createXML/defineXML
+    # TODO: add more examples to tests createXML/defineXML
     vm_name = f'vm_{datetime.now()}'
-    example1 = load_xml_example(name=vm_name)
+    example1 = load_xml_example(src_file='../tests/examples/xmldoc_example.xml', name=vm_name)
     return [example1]

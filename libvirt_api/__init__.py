@@ -1,4 +1,3 @@
-import libvirt_api.commands
 from libvirt_api.commands import *
 from libvirt_api.commands.bindings import Command
 from libvirt_api.exceptions import Position, print_stderr
@@ -27,6 +26,8 @@ class LibvirtManager:
         # for now, will simply call (do_task)
         # TODO: properly implement task reception
         print_stderr('request received', pos='first', context=task, raise_exception=False)
+        if isinstance(task, str):
+            task = JsonXmlDict(task)
         return self.do_task(task)
 
     # this maps all libvirt API methods to tasks
@@ -43,7 +44,7 @@ class LibvirtManager:
         # ease of use
         connection = self.connection
         # run command
-        command.value(connection, task)
+        return command.value(connection, task)
 
     @staticmethod
     def create_connection_to_libvirt(uri):

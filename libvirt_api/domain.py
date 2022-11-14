@@ -1,10 +1,8 @@
 from __future__ import annotations
 from enum import Enum
 from libvirt import virDomain
-
-from libvirt_api import JsonXmlDict
 from libvirt_api.exceptions import print_stderr
-from libvirt_api.json_xml.jsonxmldict import DataType
+from libvirt_api.json_xml.jsonxmldict import DataType, JsonXmlDict
 
 
 class DOMAIN_STATE(Enum):

@@ -1,12 +1,15 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
+
 import unittest
 from dataclasses import dataclass
+
 import libvirt_api
-from libvirt_api.commands.bindings import Command
-from libvirt_api.commands import *
+from libvirt_api import LibvirtManager
+from libvirt_api.commands.bindings import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from libvirt_api.test import load_xml_example, load_xml_examples
+from tests import load_xml_example, load_xml_examples
+import sys
 
 
 class TestCommands(unittest.TestCase):
@@ -18,15 +21,15 @@ class TestCommands(unittest.TestCase):
     def setUpClass(cls) -> None:
         """called before all tests once """
         # create libvirt a new libvirt manager
-        cls.manager = libvirt_api.LibvirtManager()
+        cls.manager = LibvirtManager()
 
     def setUp(self) -> None:
-        """called before every test"""
+        """called before every tests"""
         # open new default connection to libvirt
         self.connection = self.manager.__enter__()
 
     def tearDown(self) -> None:
-        """called after every test"""
+        """called after every tests"""
         self.connection.close()
 
     # ====================================================================================================
@@ -86,7 +89,7 @@ class TestCommands(unittest.TestCase):
         """start a domain that was previously defined, and see if description matches"""
         with self.manager as connection:
             pass
-            # TODO: create this test
+            # TODO: create this tests
 
     def test_domain_shutdown(self):
         pass
@@ -106,7 +109,7 @@ class LookupSetup:
     id: int
     name: str = 'test_lookup_vm'
 
-    def __enter__(self, ctx : TestCommands):
+    def __enter__(self, ctx: TestCommands):
         """
         find domain, if it's already defined,
         """
@@ -124,7 +127,6 @@ class LookupSetup:
         self.domain.destroy()
 
 
-
-
 if __name__ == '__main__':
+    sys.path.insert('../../test_libvirt_api')
     unittest.main()

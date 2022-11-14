@@ -5,15 +5,15 @@ import traceback
 from libvirt_api.commands import *
 from libvirt_api import LibvirtManager
 from libvirt_api.json_xml.jsonxmldict import CommandSyntax
-from test import load_xml_example
+from tests import load_xml_example
 
 
 def main():
-    # test connection
+    # tests connection
     manager = LibvirtManager('qemu:///system')
     # use this statement to always close connection at the end
     with manager as connection:
-        # test domain creation
+        # tests domain creation
         for task in protocol_tasks(name='new_test_vm_100', memory='10'):
             try:
                 print_info(f'\n>>> running task: {task[CommandSyntax.command]}')

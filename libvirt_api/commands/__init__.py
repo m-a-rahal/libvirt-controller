@@ -143,7 +143,8 @@ def createXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
         print_stderr(f'failed to create domain from XML definition')  # TODO: maybe be more descriptive here
     else:
         print_info(f'Guest {domain.name()} has booted.')
-    return get_new_state(domain, connection, task)
+    get_new_state(domain, connection, task)
+    return domain
 
 
 def defineXML(connection: virConnect, task: JsonXmlDict) -> virDomain:

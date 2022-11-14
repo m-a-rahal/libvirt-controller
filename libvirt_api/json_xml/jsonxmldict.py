@@ -11,21 +11,19 @@ class DataType:
 
 
 # ========================================================================================================
-# json/xml commands and data =============================================================================
+# json/xml test_commands and data =============================================================================
 # ========================================================================================================
 
 class CommandSyntax(Enum):
+    # this is used in the json requests to write the task to be executed
     command = 'command'
+    # arguments for the command / function (kwargs or 'keyword args' are included here too)
     args = 'args'
 
 class JsonXmlDict(dict):
     """
     this class creates a task object that can be mapped to xml or json
     """
-    # this is used in the json requests to write the task to be executed
-    COMMAND_SYNTAX = CommandSyntax.command
-    # arguments for the command / function (kwargs or 'keyword args' are included here too)
-    ARGS_JSON_FIELD = CommandSyntax.args
 
     def __init__(self, data, data_type: DataType = DataType.json):  # json by default
         # init self with data from json
@@ -70,14 +68,14 @@ class JsonXmlDict(dict):
 
     @property
     def command(self):
-        return self.get(JsonXmlDict.COMMAND_SYNTAX)
+        return self.get(CommandSyntax.command.value)
 
     @property
     def args(self) -> JsonXmlDict:
         """
         :return: returns the arguments included in the dict, an empty dict
         """
-        res = self.get(JsonXmlDict.ARGS_JSON_FIELD, dict())
+        res = self.get(CommandSyntax.args.value, dict())
         return JsonXmlDict(res)
 
     def get_by_path(self, path : str) -> tuple[dict | None | str, bool]:

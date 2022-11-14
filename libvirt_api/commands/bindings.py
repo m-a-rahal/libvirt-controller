@@ -35,6 +35,6 @@ class Command(Enum):
     def json(self, **args) -> str:
         """create the json format of the command given the arguments"""
         json_dict = JsonXmlDict({})
-        json_dict[Syntx.command] = self.name
-        json_dict[Syntx.args] = args
+        json_dict[Syntx.command.value] = self.name
+        json_dict[Syntx.args.value] = args
         return json_dict.json
