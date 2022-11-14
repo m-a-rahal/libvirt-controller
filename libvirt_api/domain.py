@@ -13,7 +13,7 @@ class DOMAIN_STATE(Enum):
     VIR_DOMAIN_SHUTDOWN = 4
     VIR_DOMAIN_SHUTOFF = 5
     VIR_DOMAIN_CRASHED = 6
-    VIR_DOMAIN_PMSUSPENDED = 7
+    VIR_DOMAIN_PMSUSPENDED = 7  # power management suspended
 
 
 def get_info(domain: virDomain):

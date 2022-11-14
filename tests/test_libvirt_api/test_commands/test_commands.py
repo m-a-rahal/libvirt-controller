@@ -8,7 +8,7 @@ from libvirt_api import LibvirtManager
 from libvirt_api.commands.bindings import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from tests import load_xml_example, load_xml_examples
+from tests import load_xml_example, load_xml_examples, create_test_domain
 import sys
 
 
@@ -16,12 +16,23 @@ class TestCommands(unittest.TestCase):
     # ====================================================================================================
     # METHODS CALLED BEFORE AND AFTER TESTS ==============================================================
     # ====================================================================================================
+    manager: LibvirtManager = None
+    domain_lookup_test: virDomain = None
 
     @classmethod
     def setUpClass(cls) -> None:
         """called before all tests once """
         # create libvirt a new libvirt manager
         cls.manager = LibvirtManager()
+        # create domain to test lookups
+        with cls.manager as conn:
+            cls.domain_lookup_test = create_test_domain(conn)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        """called after all tests are done"""
+        # destroy temporary structures
+        cls.domain_lookup_test.destroy()
 
     def setUp(self) -> None:
         """called before every tests"""
@@ -35,20 +46,31 @@ class TestCommands(unittest.TestCase):
     # ====================================================================================================
     # COMMAND TESTS ======================================================================================
     # ====================================================================================================
-    def test_lookupByName(self):
-        pass
-
-    def test_lookupByID(self):
-        pass
-
-    def test_lookupByUUID(self):
-        pass
+    def test_lookup(self):
+        dummy = self.domain_lookup_test  # domain used for test
+        setup = zip(
+            [Command.lookupByID, Command.lookupByUUID, Command.lookupByName],
+            [dict(id=dummy.ID()), dict(uuid=dummy.UUIDString()), dict(name=dummy.name())]
+        )
+        """lookup domain and test if they have the same UUID"""
+        for command, args in setup:
+            json_commmand = command.json(**args)
+            domain: virDomain = self.manager.receive_task(json_commmand)
+            # assert domains are equal with UUID
+            self.assertEqual(domain.UUIDString(), self.domain_lookup_test.UUIDString())
 
     def test_open_connection(self):
-        pass
+        manager = self.manager
+        # test creation of a standard connection
+        json_command = Command.open_connection.json()
+        conn = manager.create_connection_to_libvirt(manager.default_connection_uri)
+        self.assertIsNotNone(conn, "connection failed to create")
+
+    def test_open_connection_remote(self):
+        raise Exception('unimplemented')
 
     def test_defineXML(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_createXML(self):
         """create & run via createXML a domain, and verify if :
@@ -77,31 +99,31 @@ class TestCommands(unittest.TestCase):
                 domain.destroy()
 
     def test_domain_suspend(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_resume(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_save(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_restore(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_create(self):
         """start a domain that was previously defined, and see if description matches"""
         with self.manager as connection:
-            pass
+            raise Exception('unimplemented')
             # TODO: create this tests
 
     def test_domain_shutdown(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_destroy(self):
-        pass
+        raise Exception('unimplemented')
 
     def test_domain_get_state(self):
-        pass
+        raise Exception('unimplemented')
 
 
 @dataclass
@@ -131,5 +153,4 @@ class LookupSetup:
 
 
 if __name__ == '__main__':
-    sys.path.insert('../../test_libvirt_api')
     unittest.main()

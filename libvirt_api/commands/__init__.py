@@ -25,7 +25,7 @@ def lookupByID(connection: virConnect, task: JsonXmlDict):
 
 
 def _lookup(by: LookupType, connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error(by.name, context=f'lookupByName({by.name})')
+    x = task.args.get_or_error(by.name, context=f'lookupBy({by.name})')
     # call specified lookup function
     domain: virDomain = by.value(connection, x)
     if domain is None:
