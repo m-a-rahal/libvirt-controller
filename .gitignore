@@ -8,7 +8,10 @@ other/untracked
 todo.md
 other/__init__.py
 other/dominfo_example.py
+other/conception/.$*
+other/conception/libvirt controller logic
 # to remove undesired tracked files, use git rm --cached <file>
 # to remove all files under directory, add -r option :
 #   git rm -r --cached <folder path>
 # "The removal of the file from the head revision will happen on the next commit." src: https://stackoverflow.com/a/1274447
+.vscode

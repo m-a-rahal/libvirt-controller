@@ -1,12 +1,11 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
 import unittest
+from dataclasses import dataclass
+from libvirt_api import LibvirtManager, Command
 from libvirt_api.commands import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from libvirt_api.json_xml.jsonxmldict import CommandSyntax
 from test import load_xml_example, load_xml_examples
-from libvirt_api import LibvirtManager, Command
-from dataclasses import dataclass
 
 
 class TestCommands(unittest.TestCase):

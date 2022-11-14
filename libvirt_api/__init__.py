@@ -1,5 +1,3 @@
-import multiprocessing
-
 import libvirt_api.commands
 from libvirt_api.commands import *
 from libvirt_api.commands.bindings import Command
