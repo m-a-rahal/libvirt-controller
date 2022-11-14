@@ -1,3 +1,4 @@
+from __future__ import annotations
 import sys
 from enum import Enum
 
@@ -19,3 +20,22 @@ def print_stderr(msg, raise_exception=True, pos: Position = Position.middle, con
     print(msg, file=sys.stderr)
     if raise_exception:
         raise Exception(msg)
+
+class JsonXMlError(Exception):
+
+    class UnknownDataType(Exception):
+        pass
+
+    class AttributeNotFoundError(Exception):
+        pass
+
+    class PathIsEmpty(Exception):
+        def __init__(self, path, sub_path, value):
+            self.path = path
+            self.sub_path = sub_path
+            self.value = value
+            super(JsonXMlError.PathIsEmpty, self).__init__(f"path {path} is invalid because {sub_path} is not a path (it's a final attribute with value = {value})")
+
+
+class CantCreateDomainError(Exception):
+    pass

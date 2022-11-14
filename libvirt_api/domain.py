@@ -1,7 +1,10 @@
 from __future__ import annotations
 from enum import Enum
 from libvirt import virDomain
+
+from libvirt_api import JsonXmlDict
 from libvirt_api.exceptions import print_stderr
+from libvirt_api.json_xml.jsonxmldict import DataType
 
 
 class DOMAIN_STATE(Enum):
@@ -21,6 +24,9 @@ def get_info(domain: virDomain):
         print_stderr(f"can't get info of domain {domain.name()} {domain.UUID()}")
     return info
 
+def get_desc(domain: virDomain, flags: int = 0) -> JsonXmlDict:
+    xmldesc = domain.XMLDesc(flags)
+    return JsonXmlDict(xmldesc, data_type=DataType.xml)
 
 # get state
 def get_state(domain: virDomain) -> DOMAIN_STATE or None:
@@ -30,6 +36,7 @@ def get_state(domain: virDomain) -> DOMAIN_STATE or None:
     """
     state, reason = domain.state()
     # if state in domain state accepted values #TODO: 🍀 learn trick : Enums
+    # noinspection PyProtectedMember
     if state in DOMAIN_STATE._value2member_map_:
         return DOMAIN_STATE(state)
     else:
