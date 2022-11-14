@@ -4,10 +4,10 @@ from libvirt_api.exceptions import Position, print_stderr
 from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
 
-class LibvirtManager:
-    def __init__(self, default_connection_uri='qemu:///system'):
-        # main connection
-        self.default_connection_uri = default_connection_uri
+class LibvirtManager(object):
+    default_connection_uri = 'qemu:///system'
+    def __init__(self):
+        self.connection: virConnect or None = None
 
     # 🌟 use context manager ('with' statement)  to make sure connection is closed at the end -----------------------
     def __enter__(self, connection_uri: str or None = None):
@@ -19,6 +19,7 @@ class LibvirtManager:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.connection.close()
+
     # ----------------------------------------------------------------------------------------------------------
 
     # libvirt main process/thread

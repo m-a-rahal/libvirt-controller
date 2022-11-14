@@ -1,9 +1,12 @@
 from __future__ import print_function
+
+import threading
 from datetime import datetime
+from libvirt import virConnect, virDomain
+from libvirt_api import JsonXmlDict, xml_to_dict, LibvirtManager
+import time
 
-from libvirt import virConnect
-
-from libvirt_api import JsonXmlDict, xml_to_dict
+from tests.utils import run_as_thread, Future
 
 
 def load_xml_example(src_file='../tests/examples/xmldoc_example.xml', **kwargs: object) -> str:
@@ -26,10 +29,38 @@ def load_xml_examples(src_file: str = None):
         example1 = load_xml_example(src_file=src_file, name=vm_name)
     return [example1]
 
-
-def create_test_domain(connection: virConnect, name: str = None):
+def create_test_domain(connection: virConnect, name: str = None, verbose=False):
     if name is None:
         name = f'test_domain_{datetime.now()}'
     desc = load_xml_example(name=name)
+    if verbose:
+        start_time = time.time()
+        print(f'creating domain name={name}')
     domain = connection.createXML(desc)
+    if verbose:
+        if domain is not None:
+            print(f'domain name={name} created successfully in {time.time() - start_time:0.2f} seconds')
+        else:
+            print(f'failed to created domain name={name}')
     return domain
+
+
+def create_n_domains(n: int) -> list[virDomain] :
+    """create n domains using threads"""
+    threads: list[threading.Thread] = []
+
+    @run_as_thread(thread_list=threads)
+    def create_domain_as_attribute(future_: Future):
+        with LibvirtManager() as connection:
+            future_.return_value = create_test_domain(connection, verbose=True)
+
+    futures = []
+    for _ in range(n):
+        future = Future()
+        futures.append(future)
+        create_domain_as_attribute(future)
+
+    for t in threads:
+        t.join()
+
+    return [f.return_value for f in futures]

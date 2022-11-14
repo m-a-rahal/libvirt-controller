@@ -1,38 +1,75 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
-
+import os.path
+import threading
 import unittest
 from dataclasses import dataclass
-
-import libvirt_api
 from libvirt_api import LibvirtManager
 from libvirt_api.commands.bindings import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from tests import load_xml_example, load_xml_examples, create_test_domain
-import sys
+from tests import load_xml_example, load_xml_examples, create_test_domain, create_n_domains
+from tests.utils import run_as_thread, Future
+
+
+class TestScenarios:
+    class SaveLoadFile:
+        """this creates a file for saving and loading a domain
+        this class was created to remove file creation/deletion/checking from the tests """
+        default = 'random_file'
+
+        def __init__(self, file: str = None):
+            if file is None:
+                file = TestScenarios.SaveLoadFile.default
+            self.file = file
+
+        def __enter__(self) -> str:
+            # if the file exists, don't override it ! might be an important file.
+            assert not os.path.exists(
+                self.file), f"the file '{self.file}' already exists, please choose an empty path to test " \
+                            f"domain saving and loading "
+            return self.file
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            file = self.file
+            # delete file
+            if os.path.exists(file):
+                os.remove(file)
+            assert not os.path.exists(file), f"file {file} was not deleted properly!"
 
 
 class TestCommands(unittest.TestCase):
+    # ====================================================================================================
+    # PRIVATE METHODS ====================================================================================
+    # ====================================================================================================
+    def run_command(self, command: Command, **args):
+        json_command = command.json(**args)
+        return self.manager.receive_task(json_command)
+
     # ====================================================================================================
     # METHODS CALLED BEFORE AND AFTER TESTS ==============================================================
     # ====================================================================================================
     manager: LibvirtManager = None
     domain_lookup_test: virDomain = None
+    domain_state_change_test: virDomain = None
 
     @classmethod
     def setUpClass(cls) -> None:
         """called before all tests once """
         # create libvirt a new libvirt manager
         cls.manager = LibvirtManager()
-        # create domain to test lookups
-        with cls.manager as conn:
-            cls.domain_lookup_test = create_test_domain(conn)
+        # create 2 domains
+        domains = create_n_domains(3)
+        # one to test lookups
+        cls.domain_lookup_test = domains.pop()
+        # another to test state changes, TODO: need OS here, try to make alpine work (for now use simple domain)
+        cls.domain_state_change_test = domains.pop()
 
     @classmethod
     def tearDownClass(cls) -> None:
         """called after all tests are done"""
         # destroy temporary structures
         cls.domain_lookup_test.destroy()
+        cls.domain_state_change_test.destroy()
 
     def setUp(self) -> None:
         """called before every tests"""
@@ -54,8 +91,7 @@ class TestCommands(unittest.TestCase):
         )
         """lookup domain and test if they have the same UUID"""
         for command, args in setup:
-            json_commmand = command.json(**args)
-            domain: virDomain = self.manager.receive_task(json_commmand)
+            domain: virDomain = self.run_command(command, **args)
             # assert domains are equal with UUID
             self.assertEqual(domain.UUIDString(), self.domain_lookup_test.UUIDString())
 
@@ -63,7 +99,7 @@ class TestCommands(unittest.TestCase):
         manager = self.manager
         # test creation of a standard connection
         json_command = Command.open_connection.json()
-        conn = manager.create_connection_to_libvirt(manager.default_connection_uri)
+        conn = self.run_command(Command.open_connection, name=LibvirtManager.default_connection_uri)
         self.assertIsNotNone(conn, "connection failed to create")
 
     def test_open_connection_remote(self):
@@ -81,8 +117,7 @@ class TestCommands(unittest.TestCase):
             for i, xml_desc_example in enumerate(load_xml_examples()):
                 print('testing on example', i)
                 # call createXMl
-                command = Command.createXML.json(xmlDesc=xml_desc_example, flags=0)
-                domain: virDomain = self.manager.receive_task(command)
+                domain: virDomain = self.run_command(Command.createXML, xmlDesc=xml_desc_example, flags=0)
                 # testing
                 # is domain good None ? and is it good type
                 self.assertIsNotNone(domain, f"domain = None (failed to create) after createXMl with example {i}")
@@ -98,17 +133,30 @@ class TestCommands(unittest.TestCase):
                 print('deleting test domain')
                 domain.destroy()
 
-    def test_domain_suspend(self):
-        raise Exception('unimplemented')
+    def test_domain_suspend_and_resume(self):
+        domain = self.domain_state_change_test
+        try:
+            domain.XMLDesc(0)
+        except:
+            domain = create_test_domain(self.connection, verbose=True)
+        # suspend domain and see if it suspends (new state)
+        new_state = self.run_command(Command.domain_suspend, name=domain.UUIDString())
+        self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_PAUSED)
+        # resume domain and see if it resumes (new state)
+        new_state = self.run_command(Command.domain_resume, name=domain.UUIDString())
+        self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
 
-    def test_domain_resume(self):
-        raise Exception('unimplemented')
+    def test_domain_save_and_restore(self):
+        domain = self.domain_state_change_test
+        # save domain and see if it works (TODO: 🟠 how ?)
+        file_scope = TestScenarios.SaveLoadFile()
 
-    def test_domain_save(self):
-        raise Exception('unimplemented')
-
-    def test_domain_restore(self):
-        raise Exception('unimplemented')
+        with file_scope as file:  # this will create the file, then delete it after use
+            new_state = self.run_command(Command.domain_save, to=file, uuid=domain.UUIDString())
+            self.assertTrue(os.path.exists(file), "the save file for the domain was not created, domain was not saved")
+            # restore domain and see if it resumes (new state)
+            new_state = self.run_command(Command.domain_restore, frm=file, uuid=domain.UUIDString())
+            self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
 
     def test_domain_create(self):
         """start a domain that was previously defined, and see if description matches"""

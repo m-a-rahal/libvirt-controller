@@ -6,7 +6,7 @@ import libvirt
 from libvirt import virDomain, virConnect
 
 from libvirt_api.commands.function_enum import FunctionEnum
-from libvirt_api.domain import get_state
+from libvirt_api.domain import get_state, DOMAIN_STATE
 from libvirt_api.exceptions import print_stderr, print_info, Position
 from libvirt_api.json_xml import *
 from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
@@ -50,13 +50,13 @@ class LookupType(Enum):
     uuid = FunctionEnum(virConnect.lookupByUUIDString)
 
 
-def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict):
+def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict) -> DOMAIN_STATE:
     state = None
     try:
-        state = get_state(domain).name
+        state = get_state(domain)
     except Exception as e:
-        print_stderr('failed to get state', pos=Position.last)
-    print_info(f'new state = {state}', pos=Position.last)
+        print_stderr('failed to get state', pos=Position.last, context=str(e))
+    print_info(f'new state = {state.name}', pos=Position.last)
     return state
 
 
@@ -116,7 +116,7 @@ def domain_suspend(connection: virConnect, task: JsonXmlDict):
     return get_new_state(domain, connection, task)
 
 
-def open_connection(task: JsonXmlDict):
+def open_connection(_, task: JsonXmlDict):  # TODO: 🔴 bad design, fix this mess
     # TODO: 🟢 create this if needed
     name = task.args.get_or_error('name', context='open_connection(name) / libvirt.open(name) / name ~ uri, eg: name = '
                                                   '"qemu:///system"')
