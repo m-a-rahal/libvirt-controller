@@ -2,10 +2,11 @@
 import unittest
 from libvirt_api.commands import *
 from libvirt_api.exceptions import CantCreateDomainError
-from test import load_xml_example
-from datetime import datetime
-from libvirt_api import LibvirtManager
+from libvirt_api.json_xml.jsonxmldict import CommandSyntax
+from test import load_xml_example, load_xml_examples
+from libvirt_api import LibvirtManager, Command
 from dataclasses import dataclass
+
 
 class TestCommands(unittest.TestCase):
     # ====================================================================================================
@@ -50,11 +51,10 @@ class TestCommands(unittest.TestCase):
                 - domain is created and is running
                 - generated XML info matches (or mostly matches) the one requested"""
         with self.manager as connection:
-            vm_name = f'vm_{datetime.now()}'
-            xml_desc = load_xml_example(name=vm_name)
-            domain = createXML(connection, JsonXmlDict({
-
-            }))
+            # load an example xml_desc
+            for xml_desc_example in load_xml_examples():
+                # call createXMl
+                domain = Command.createXML.json(xmlDesc=xml_desc_example, flags=0)
             # TODO: make this test
             # self.assertTrue(domain is running)
             # self.assertTrue(domain matches xml)

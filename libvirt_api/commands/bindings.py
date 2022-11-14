@@ -1,6 +1,7 @@
 from __future__ import annotations
 from libvirt_api.commands import *
 from libvirt_api.commands.function_enum import FunctionEnum
+from libvirt_api.json_xml.jsonxmldict import JsonXmlDict, CommandSyntax as Syntx
 
 
 # TODO: 🔴[📨response] each response must identify the destination, so include that somewhere somehow
@@ -30,3 +31,10 @@ class Command(Enum):
     def parse(cls, command_str) -> Command or None:
         """returns enum for provided command string, or None"""
         return cls._member_map_.get(command_str, None)
+
+    def json(self, **args) -> str:
+        """create the json format of the command given the arguments"""
+        json_dict = JsonXmlDict({})
+        json_dict[Syntx.command] = self.name
+        json_dict[Syntx.args] = args
+        return json_dict.json
