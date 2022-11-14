@@ -4,6 +4,10 @@ venv
 **__pycache__ 
 random_file
 other/untracked
+# now history will be logged onto git "dev" branch
+todo.md
+other/__init__.py
+other/dominfo_example.py
 # to remove undesired tracked files, use git rm --cached <file>
 # to remove all files under directory, add -r option :
 #   git rm -r --cached <folder path>
