@@ -1,11 +1,12 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
 import unittest
 from dataclasses import dataclass
-from libvirt_api import LibvirtManager, Command
+import libvirt_api
+from libvirt_api.commands.bindings import Command
 from libvirt_api.commands import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from test import load_xml_example, load_xml_examples
+from libvirt_api.test import load_xml_example, load_xml_examples
 
 
 class TestCommands(unittest.TestCase):
@@ -17,7 +18,7 @@ class TestCommands(unittest.TestCase):
     def setUpClass(cls) -> None:
         """called before all tests once """
         # create libvirt a new libvirt manager
-        cls.manager = LibvirtManager()
+        cls.manager = libvirt_api.LibvirtManager()
 
     def setUp(self) -> None:
         """called before every test"""

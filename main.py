@@ -4,6 +4,7 @@ import traceback
 
 from libvirt_api.commands import *
 from libvirt_api import LibvirtManager
+from libvirt_api.json_xml.jsonxmldict import CommandSyntax
 from test import load_xml_example
 
 
@@ -13,9 +14,9 @@ def main():
     # use this statement to always close connection at the end
     with manager as connection:
         # test domain creation
-        for task in protocol_alpine_shutdown(name='new_test_vm_100', memory='10'):
+        for task in protocol_tasks(name='new_test_vm_100', memory='10'):
             try:
-                print_info(f'\n>>> running task: {task["libvirt_command"]}')
+                print_info(f'\n>>> running task: {task[CommandSyntax.command]}')
                 domain = manager.receive_task(task)
             except Exception as e:
                 print_stderr(e, context="error", raise_exception=False)
@@ -25,8 +26,8 @@ def protocol_alpine_shutdown(**kwargs):
     docDesc = load_xml_example(**kwargs)
     return [
         JsonXmlDict({
-            'libvirt_command': 'domain_shutdown',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_shutdown',
+            CommandSyntax.args: {
                 'name': 'alpinelinux3.15',
             }
         })
@@ -37,81 +38,81 @@ def protocol_tasks(**kwargs):
     return [
         # create VM from XML
         JsonXmlDict({
-            'libvirt_command': 'createXML',
-            'libvirt_args': {
+            CommandSyntax.command: 'createXML',
+            CommandSyntax.args: {
                 'xmlDesc': docDesc,
                 'flags': 0,
             }
         }),
         # pause VM
         JsonXmlDict({
-            'libvirt_command': 'domain_suspend',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_suspend',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # resume VM
         JsonXmlDict({
-            'libvirt_command': 'domain_resume',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_resume',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # save VM
         JsonXmlDict({
-            'libvirt_command': 'domain_save',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_save',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
                 'to': 'random_file',
             }
         }),
         # restore VM
         JsonXmlDict({
-            'libvirt_command': 'domain_restore',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_restore',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
                 'frm': 'random_file',
             }
         }),
         # shutdown VM (doesn't work without OS)
         JsonXmlDict({
-            'libvirt_command': 'domain_shutdown',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_shutdown',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # destroy VM
         JsonXmlDict({
-            'libvirt_command': 'domain_destroy',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_destroy',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # define VM
         JsonXmlDict({
-            'libvirt_command': 'defineXML',
-            'libvirt_args': {
+            CommandSyntax.command: 'defineXML',
+            CommandSyntax.args: {
                 'xml': docDesc,
             }
         }),
         # start/create VM
         JsonXmlDict({
-            'libvirt_command': 'domain_create',
-            'libvirt_args': {
+            CommandSyntax.command: 'domain_create',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # lookup VM (by name)
         JsonXmlDict({
-            'libvirt_command': 'lookupByName',
-            'libvirt_args': {
+            CommandSyntax.command: 'lookupByName',
+            CommandSyntax.args: {
                 'name': 'new_test_vm_100',
             }
         }),
         # lookup by UUID string
         JsonXmlDict({
-            'libvirt_command': 'lookupByUUID',
-            'libvirt_args': {
+            CommandSyntax.command: 'lookupByUUID',
+            CommandSyntax.args: {
                 'uuid': '07aea90a-ad87-4480-b6e2-c2d3bc5ed4ee',
             }
         }),
