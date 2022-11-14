@@ -29,7 +29,7 @@ def get_desc(domain: virDomain, flags: int = 0) -> JsonXmlDict:
     return JsonXmlDict(xmldesc, data_type=DataType.xml)
 
 # get state
-def get_state(domain: virDomain) -> DOMAIN_STATE or None:
+def get_state(domain: virDomain) -> DOMAIN_STATE:
     """
     returns domain state, might raise exception if info can't be obtained
     :return: domain state
@@ -41,4 +41,10 @@ def get_state(domain: virDomain) -> DOMAIN_STATE or None:
         return DOMAIN_STATE(state)
     else:
         print_stderr(f'The state is unknown. reason code = {reason}')
-    return None
+
+def domain_matches_xmlDesc(domain: virDomain, xmlDesc: str):
+    self_xmlDesc = get_desc(domain)
+    # TODO: implement xml matching
+    if self_xmlDesc == xmlDesc:
+        pass
+    return True

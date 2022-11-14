@@ -1,6 +1,7 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
 import unittest
 from libvirt_api.commands import *
+from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
 from libvirt_api.json_xml.jsonxmldict import CommandSyntax
 from test import load_xml_example, load_xml_examples
@@ -52,12 +53,22 @@ class TestCommands(unittest.TestCase):
                 - generated XML info matches (or mostly matches) the one requested"""
         with self.manager as connection:
             # load an example xml_desc
-            for xml_desc_example in load_xml_examples():
+            for i, xml_desc_example in enumerate(load_xml_examples()):
+                print('testing on example', i)
                 # call createXMl
-                domain = Command.createXML.json(xmlDesc=xml_desc_example, flags=0)
-            # TODO: make this test
-            # self.assertTrue(domain is running)
-            # self.assertTrue(domain matches xml)
+                command = Command.createXML.json(xmlDesc=xml_desc_example, flags=0)
+                domain = self.manager.receive_task(command)
+                # testing
+                # is domain good None ? and is it good type
+                self.assertIsNotNone(domain, f"domain = None (failed to create) after createXMl with example {i}")
+                self.assertIsInstance(domain, virDomain, f"command returned the wrong type: {type(domain)}, expected "
+                                                         f"virDomain")
+                # is domain running
+                state = get_state(domain)
+                self.assertEqual(state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
+                # assert that created VM has same description as intended
+                self.assertTrue(domain_matches_xmlDesc(domain, xml_desc_example), "VM has different description than "
+                                                                                  "described in XML creation command")
 
     def test_domain_suspend(self):
         pass
