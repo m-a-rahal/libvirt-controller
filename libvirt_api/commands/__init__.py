@@ -1,19 +1,24 @@
 from __future__ import annotations
-import libvirt
-from libvirt import virDomain, virConnect
+
 from enum import Enum
 
+import libvirt
+from libvirt import virDomain, virConnect
+
 from libvirt_api.commands.function_enum import FunctionEnum
-from libvirt_api.domain import get_state, get_info
+from libvirt_api.domain import get_state
 from libvirt_api.exceptions import print_stderr, print_info, Position
+from libvirt_api.json_xml import *
 from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
 
 def lookupByName(connection: virConnect, task: JsonXmlDict):
     return _lookup(LookupType.name, connection, task)
 
+
 def lookupByUUID(connection: virConnect, task: JsonXmlDict):
     return _lookup(LookupType.uuid, connection, task)
+
 
 def lookupByID(connection: virConnect, task: JsonXmlDict):
     return _lookup(LookupType.id, connection, task)
@@ -22,7 +27,7 @@ def lookupByID(connection: virConnect, task: JsonXmlDict):
 def _lookup(by: LookupType, connection: virConnect, task: JsonXmlDict):
     x = task.args.get_or_error(by.name, context=f'lookupByName({by.name})')
     # call specified lookup function
-    domain:virDomain = by.value(connection, x)
+    domain: virDomain = by.value(connection, x)
     if domain is None:
         print_stderr(f"domain name={x} does not exist, or lookup failed")
     else:
@@ -150,6 +155,22 @@ def defineXML(connection: virConnect, task: JsonXmlDict) -> virDomain:
         print_stderr(f'Guest {domain.name()} successfully defined.', raise_exception=False)
     # cast domain (virDomain) to Domain class (to have extra functionality)
     return get_new_state(domain, connection, task)
+
+
+def XMLDesc(connection: virConnect, task: JsonXmlDict, verbose=True) -> str:
+    domain = lookup_domain(connection, task)
+    flags = task.args.get('flags', 0)
+    xml_desc = domain.XMLDesc(flags)
+    if verbose:
+        print_info(f'domain XMLDesc :\n{xml_desc}')
+    return xml_desc
+
+
+def JSONDesc(connection: virConnect, task: JsonXmlDict) -> str:
+    xml_desc = XMLDesc(connection, task, verbose=False)
+    json_desc = xml_to_json(xml_desc)
+    print_info(f'domain JSONDesc :\n{json_desc}')
+    return json_desc
 
 
 def lookup_domain(connection: libvirt.virConnect, task: JsonXmlDict) -> virDomain:
