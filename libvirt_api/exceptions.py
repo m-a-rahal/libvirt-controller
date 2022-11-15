@@ -39,3 +39,15 @@ class JsonXMlError(Exception):
 
 class CantCreateDomainError(Exception):
     pass
+
+
+class FailedToGetState(Exception):
+    pass
+
+
+class FailedToSaveDomain(Exception):
+    pass
+
+
+class FailedToRestoreDomain(Exception):
+    pass

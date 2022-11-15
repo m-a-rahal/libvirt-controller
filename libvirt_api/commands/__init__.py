@@ -5,6 +5,7 @@ from enum import Enum
 import libvirt
 from libvirt import virDomain, virConnect
 
+from libvirt_api import exceptions
 from libvirt_api.commands.function_enum import FunctionEnum
 from libvirt_api.domain import get_state, DOMAIN_STATE
 from libvirt_api.exceptions import print_stderr, print_info, Position
@@ -55,7 +56,8 @@ def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict) 
     try:
         state = get_state(domain)
     except Exception as e:
-        print_stderr('failed to get state', pos=Position.last, context=str(e))
+        print_stderr('failed to get state', pos=Position.last, context=str(e), raise_exception=False)
+        raise exceptions.FailedToGetState()
     print_info(f'new state = {state.name}', pos=Position.last)
     return state
 
@@ -81,13 +83,17 @@ def domain_create(connection: virConnect, task: JsonXmlDict):
 def domain_restore(connection: virConnect, task: JsonXmlDict):
     frm = task.args.get_or_error('frm', context='domain_restore(frm)')  # restore from file
     domain = connection.restore(frm)
+    if not isinstance(domain, virDomain) or domain == 0:
+        raise exceptions.FailedToRestoreDomain()
     return get_new_state(domain, connection, task)  # TODO: 🔴💥 what does 'restore' return? check result, if None etc.
 
 
 def domain_save(connection: virConnect, task: JsonXmlDict):
     domain = lookup_domain(connection, task)
     to = task.args.get_or_error('to', context='domain_save(to)')
-    domain.save(to)
+    res = domain.save(to)
+    if res < 0:
+        raise exceptions.FailedToSaveDomain("failed to save domain")
     try:
         return get_new_state(domain, connection, task)
     except libvirt.libvirtError as e:

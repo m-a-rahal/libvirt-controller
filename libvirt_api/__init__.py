@@ -42,10 +42,8 @@ class LibvirtManager(object):
         if command is None:
             print_stderr(f'libvirt_command = "{command}" is not recognized!', pos=Position.last)
         arguments = task.args  # get command args/kwargs
-        # ease of use
-        connection = self.connection
         # run command
-        return command.value(connection, task)
+        return command.value(self.connection, task)
 
     @staticmethod
     def create_connection_to_libvirt(uri):

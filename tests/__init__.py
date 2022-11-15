@@ -64,3 +64,16 @@ def create_n_domains(n: int) -> list[virDomain] :
         t.join()
 
     return [f.return_value for f in futures]
+
+class TempDomain:
+    def __init__(self, connection: virConnect):
+        self.domain: virDomain | None = None
+        self.connection = connection
+
+    def __enter__(self):
+        domain = create_test_domain(self.connection, verbose=True)
+        self.domain = domain
+        return domain
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.domain.destroy()
