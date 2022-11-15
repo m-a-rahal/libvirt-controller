@@ -135,15 +135,11 @@ class TestCommands(unittest.TestCase):
 
     def test_domain_suspend_and_resume(self):
         domain = self.domain_state_change_test
-        try:
-            domain.XMLDesc(0)
-        except:
-            domain = create_test_domain(self.connection, verbose=True)
         # suspend domain and see if it suspends (new state)
-        new_state = self.run_command(Command.domain_suspend, name=domain.UUIDString())
+        new_state = self.run_command(Command.domain_suspend, uuid=domain.UUIDString())
         self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_PAUSED)
         # resume domain and see if it resumes (new state)
-        new_state = self.run_command(Command.domain_resume, name=domain.UUIDString())
+        new_state = self.run_command(Command.domain_resume, uuid=domain.UUIDString())
         self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
 
     def test_domain_save_and_restore(self):
