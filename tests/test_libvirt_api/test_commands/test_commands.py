@@ -1,13 +1,17 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
 import os.path
 import threading
+import traceback
 import unittest
 from dataclasses import dataclass
+
+import libvirt
+
 from libvirt_api import LibvirtManager
 from libvirt_api.commands.bindings import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from tests import load_xml_example, load_xml_examples, create_test_domain, create_n_domains
+from tests import load_xml_example, load_xml_examples, create_test_domain, create_n_domains, TempDomain
 from tests.utils import run_as_thread, Future
 
 
@@ -58,7 +62,7 @@ class TestCommands(unittest.TestCase):
         # create libvirt a new libvirt manager
         cls.manager = LibvirtManager()
         # create 2 domains
-        domains = create_n_domains(3)
+        domains = create_n_domains(2)
         # one to test lookups
         cls.domain_lookup_test = domains.pop()
         # another to test state changes, TODO: need OS here, try to make alpine work (for now use simple domain)
@@ -143,16 +147,22 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
 
     def test_domain_save_and_restore(self):
-        domain = self.domain_state_change_test
-        # save domain and see if it works (TODO: 🟠 how ?)
-        file_scope = TestScenarios.SaveLoadFile()
-
-        with file_scope as file:  # this will create the file, then delete it after use
-            new_state = self.run_command(Command.domain_save, to=file, uuid=domain.UUIDString())
-            self.assertTrue(os.path.exists(file), "the save file for the domain was not created, domain was not saved")
-            # restore domain and see if it resumes (new state)
-            new_state = self.run_command(Command.domain_restore, frm=file, uuid=domain.UUIDString())
-            self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
+        # ⚠ this
+        with TempDomain(self.connection) as domain:  # create temporary domain
+            # save domain and see if it works (TODO: 🟠 how ?)
+            file_scope = TestScenarios.SaveLoadFile()
+            with file_scope as file:  # this will create the file, then delete it after use
+                try:
+                    new_state = self.run_command(Command.domain_save, to=file, uuid=domain.UUIDString())
+                except exceptions.FailedToGetState as e:
+                    pass  # expected behavior
+                self.assertTrue(os.path.exists(file), "the save file for the domain was not created, domain was not saved")
+                # restore domain and see if it resumes (new state)
+                try:
+                    new_state = self.run_command(Command.domain_restore, frm=file, uuid=domain.UUIDString())
+                except exceptions.FailedToSaveDomain:
+                    self.fail('failed to load domain')
+                self.assertEqual(new_state, DOMAIN_STATE.VIR_DOMAIN_RUNNING)
 
     def test_domain_create(self):
         """start a domain that was previously defined, and see if description matches"""
@@ -161,7 +171,16 @@ class TestCommands(unittest.TestCase):
             # TODO: create this tests
 
     def test_domain_shutdown(self):
-        raise Exception('unimplemented')
+        with TempDomain(self.connection) as domain:
+            first_state = get_state(domain)
+            assert first_state == DOMAIN_STATE.VIR_DOMAIN_RUNNING, "created domain is not running"
+            uuid = domain.UUIDString()
+            domain: virDomain = self.run_command(Command.domain_shutdown, uuid=uuid)
+            new_state = get_state(domain)
+            self.assertNotEqual(first_state, new_state, "the domain is still running")
+
+
+
 
     def test_domain_destroy(self):
         raise Exception('unimplemented')
