@@ -6,6 +6,7 @@ from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
 class LibvirtManager(object):
     default_connection_uri = 'qemu:///system'
+
     def __init__(self):
         self.connection: virConnect or None = None
 

@@ -12,6 +12,12 @@ from libvirt_api.exceptions import print_stderr, print_info, Position
 from libvirt_api.json_xml import *
 from libvirt_api.json_xml.jsonxmldict import JsonXmlDict
 
+# ====================================================================================================
+# Lookup function(s) =================================================================================
+# ====================================================================================================
+# NOTE 🔴 : the UUID in the libvirt API is called UUIDString, if you try calling domain.UUID()
+#           you'll get a weird object, I noticed that it's almost never used, so it's not included
+#           domain.UUIDString() is the one that gives you the real uuid (ex: 4dea22b3-1d52-d8f3-2516-782e98ab3fa0)
 
 def lookupByName(connection: virConnect, task: JsonXmlDict):
     return _lookup(LookupType.name, connection, task)
@@ -26,6 +32,7 @@ def lookupByID(connection: virConnect, task: JsonXmlDict):
 
 
 def _lookup(by: LookupType, connection: virConnect, task: JsonXmlDict):
+    """Generic lookup function, it's used to gather repetitive code from other functions (easier to maintain)"""
     x = task.args.get_or_error(by.name, context=f'lookupBy({by.name})')
     # call specified lookup function
     domain: virDomain = by.value(connection, x)
@@ -37,19 +44,14 @@ def _lookup(by: LookupType, connection: virConnect, task: JsonXmlDict):
     return domain
 
 
-def _lookupByUUID(connection: virConnect, task: JsonXmlDict):
-    x = task.args.get_or_error('uuid', context=f'lookupByUUIDString(uuid)')
-    domain = connection.lookupByUUIDString(x)
-    if domain is None:
-        print_stderr(f"domain uuid={x} does not exist, or lookup failed")
-    return domain
-
-
 class LookupType(Enum):
     name = FunctionEnum(virConnect.lookupByName)
     id = FunctionEnum(virConnect.lookupByID)
     uuid = FunctionEnum(virConnect.lookupByUUIDString)
 
+# ====================================================================================================
+# ====================================================================================================
+# ====================================================================================================
 
 def get_new_state(domain: virDomain, connection: virConnect, task: JsonXmlDict) -> DOMAIN_STATE:
     state = None

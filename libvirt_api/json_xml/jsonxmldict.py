@@ -1,5 +1,4 @@
 from __future__ import annotations
-import random
 from enum import Enum
 from libvirt_api.exceptions import JsonXMlError
 from libvirt_api.json_xml import *
@@ -15,10 +14,18 @@ class DataType:
 # ========================================================================================================
 
 class CommandSyntax(Enum):
+    """the syntax used in JSON requests, example of a request :
+    {
+        'command' : 'domain_suspend'  #  command = suspend domain
+        'args' : {
+            'uuid' : '4dea22b3-1d52-d8f3-2516-782e98ab3fa0',    # this is the uuid of the domain to suspend
+        }
+    }"""
     # this is used in the json requests to write the task to be executed
     command = 'command'
     # arguments for the command / function (kwargs or 'keyword args' are included here too)
     args = 'args'
+
 
 class JsonXmlDict(dict):
     """
@@ -37,14 +44,19 @@ class JsonXmlDict(dict):
         elif isinstance(data, dict):
             super(JsonXmlDict, self).__init__(data)
 
-    def get_or_error(self, attribute, context, null_value=-1):
-        # TODO: 🔴🔴🔴 add context to all occurrences of this function
-        result = self.get(attribute, null_value)
-        if result == null_value:
-            # the value of the attribute might actually be equal to -1, so make sure the attribute really doesn't exist
-            if attribute not in self.keys():
-                raise JsonXMlError.AttributeNotFoundError(f"attribute '{attribute}' not found, context : {context}")
-        return result
+    def get_or_error(self, attribute, context: str):
+        """
+        NOTE: this method is optional, it's almost equivalent to dit[key]
+        This method is attempts to find a given attribute in the dictionary (a key)
+        if it's not found, it simply raises an error
+        :param attribute: the attribute you're looking for in the dict
+        :param context: if error, provide a message describing the error (the context of the error)
+        :return:
+        """
+        try:
+            return self[attribute]
+        except KeyError:
+            raise JsonXMlError.AttributeNotFoundError(f"attribute '{attribute}' not found, context : {context}")
 
     @property
     def json(self):
@@ -55,30 +67,17 @@ class JsonXmlDict(dict):
         return dict_to_xml(self)
 
     @property
-    def source(self):
-        # the source, the sender of the task ~ (not yet defined)
-        # TODO: 🟠 implement this properly or delete it
-        return self.get('source', 'unknown_source')
-
-    @property
-    def task_id(self):
-        # ID of the task ~ (not yet defined)
-        # TODO: 🟠 implement this or delete it
-        return self.get('task_id', random.randint(0, 10000))
-
-    @property
     def command(self):
-        return self.get(CommandSyntax.command.value)
+        """returns the command field in this dictionary"""
+        return self[CommandSyntax.command.value]
 
     @property
     def args(self) -> JsonXmlDict:
-        """
-        :return: returns the arguments included in the dict, an empty dict
-        """
+        """returns the arguments field in this dictionary, or {} if no arguments are present"""
         res = self.get(CommandSyntax.args.value, dict())
         return JsonXmlDict(res)
 
-    def get_by_path(self, path : str) -> tuple[dict | None | str, bool]:
+    def get_by_path(self, path: str) -> tuple[dict | None | str, bool]:
         """
         retrieves the attribute specified by the path
         :param path: attribute names separated by /, eg: domain/os/type,   or /domain/@type
@@ -89,7 +88,7 @@ class JsonXmlDict(dict):
         # walk along path, one step at a time
         for i, name in enumerate(path[:-1]):  # treat all elements, except last one, treated separately
             try:
-                value = attr.get_or_error(name, context=f"get_by_path({path} failed, {path.sub_path(i+1)} not found)")
+                value = attr.get_or_error(name, context=f"get_by_path({path} failed, {path.sub_path(i + 1)} not found)")
             except JsonXMlError.AttributeNotFoundError:
                 # path doesn't exist
                 return None, False
@@ -111,6 +110,8 @@ class JsonXmlDict(dict):
         except JsonXMlError.AttributeNotFoundError:
             # path doesn't exist
             return None, False
+
+
 class PathXmlJson(list):
     def __init__(self, path: str, separator: str = '/'):
         self._path = path

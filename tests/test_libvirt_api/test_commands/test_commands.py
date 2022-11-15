@@ -1,18 +1,13 @@
 # #unit_test_tutorial: https://machinelearningmastery.com/a-gentle-introduction-to-unit-testing-in-python)
 import os.path
-import threading
-import traceback
 import unittest
 from dataclasses import dataclass
-
-import libvirt
 
 from libvirt_api import LibvirtManager
 from libvirt_api.commands.bindings import *
 from libvirt_api.domain import DOMAIN_STATE, domain_matches_xmlDesc
 from libvirt_api.exceptions import CantCreateDomainError
-from tests import load_xml_example, load_xml_examples, create_test_domain, create_n_domains, TempDomain
-from tests.utils import run_as_thread, Future
+from tests import load_xml_example, load_xml_examples, create_n_domains, TempDomain
 
 
 class TestScenarios:
@@ -46,7 +41,7 @@ class TestCommands(unittest.TestCase):
     # PRIVATE METHODS ====================================================================================
     # ====================================================================================================
     def run_command(self, command: Command, **args):
-        json_command = command.json(**args)
+        json_command = command.as_json(**args)
         return self.manager.receive_task(json_command)
 
     # ====================================================================================================
@@ -102,7 +97,7 @@ class TestCommands(unittest.TestCase):
     def test_open_connection(self):
         manager = self.manager
         # test creation of a standard connection
-        json_command = Command.open_connection.json()
+        json_command = Command.open_connection.as_json()
         conn = self.run_command(Command.open_connection, name=LibvirtManager.default_connection_uri)
         self.assertIsNotNone(conn, "connection failed to create")
 
@@ -156,7 +151,8 @@ class TestCommands(unittest.TestCase):
                     new_state = self.run_command(Command.domain_save, to=file, uuid=domain.UUIDString())
                 except exceptions.FailedToGetState as e:
                     pass  # expected behavior
-                self.assertTrue(os.path.exists(file), "the save file for the domain was not created, domain was not saved")
+                self.assertTrue(os.path.exists(file),
+                                "the save file for the domain was not created, domain was not saved")
                 # restore domain and see if it resumes (new state)
                 try:
                     new_state = self.run_command(Command.domain_restore, frm=file, uuid=domain.UUIDString())
@@ -178,9 +174,6 @@ class TestCommands(unittest.TestCase):
             domain: virDomain = self.run_command(Command.domain_shutdown, uuid=uuid)
             new_state = get_state(domain)
             self.assertNotEqual(first_state, new_state, "the domain is still running")
-
-
-
 
     def test_domain_destroy(self):
         raise Exception('unimplemented')

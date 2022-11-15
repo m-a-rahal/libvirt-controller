@@ -6,6 +6,15 @@ from libvirt_api.json_xml.jsonxmldict import DataType, JsonXmlDict
 
 
 class DOMAIN_STATE(Enum):
+    """
+    this describes all possible states of a domain (copied from the source [~10 november 2022])
+    I tried to extend libvirt.virDomain class, but that required casting virDomain to the new subclass,
+    which didn't work.
+    I tried this solution for example :
+    https://stackoverflow.com/questions/3464061/cast-base-class-to-derived-class-python-or-more-pythonic-way-of-extending-class
+    However there might be a better solution:
+    TODO: try this for type casting: https://docs.python.org/3/library/typing.html#typing.cast
+    """
     VIR_DOMAIN_NOSTATE = 0
     VIR_DOMAIN_RUNNING = 1
     VIR_DOMAIN_BLOCKED = 2
@@ -22,9 +31,11 @@ def get_info(domain: virDomain):
         print_stderr(f"can't get info of domain {domain.name()} {domain.UUID()}")
     return info
 
+
 def get_desc(domain: virDomain, flags: int = 0) -> JsonXmlDict:
     xmldesc = domain.XMLDesc(flags)
     return JsonXmlDict(xmldesc, data_type=DataType.xml)
+
 
 # get state
 def get_state(domain: virDomain) -> DOMAIN_STATE:
@@ -33,12 +44,13 @@ def get_state(domain: virDomain) -> DOMAIN_STATE:
     :return: domain state
     """
     state, reason = domain.state()
-    # if state in domain state accepted values #TODO: 🍀 learn trick : Enums
+    # if state in domain state accepted values
     # noinspection PyProtectedMember
     if state in DOMAIN_STATE._value2member_map_:
         return DOMAIN_STATE(state)
     else:
         print_stderr(f'The state is unknown. reason code = {reason}')
+
 
 def domain_matches_xmlDesc(domain: virDomain, xmlDesc: str):
     self_xmlDesc = get_desc(domain)

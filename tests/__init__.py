@@ -1,11 +1,12 @@
 from __future__ import print_function
 
 import threading
-from datetime import datetime
-from libvirt import virConnect, virDomain
-from libvirt_api import JsonXmlDict, xml_to_dict, LibvirtManager
 import time
+from datetime import datetime
 
+from libvirt import virConnect, virDomain
+
+from libvirt_api import JsonXmlDict, xml_to_dict, LibvirtManager
 from tests.utils import run_as_thread, Future
 
 
@@ -29,6 +30,7 @@ def load_xml_examples(src_file: str = None):
         example1 = load_xml_example(src_file=src_file, name=vm_name)
     return [example1]
 
+
 def create_test_domain(connection: virConnect, name: str = None, verbose=False):
     if name is None:
         name = f'test_domain_{datetime.now()}'
@@ -45,7 +47,7 @@ def create_test_domain(connection: virConnect, name: str = None, verbose=False):
     return domain
 
 
-def create_n_domains(n: int) -> list[virDomain] :
+def create_n_domains(n: int) -> list[virDomain]:
     """create n domains using threads"""
     threads: list[threading.Thread] = []
 
@@ -64,6 +66,7 @@ def create_n_domains(n: int) -> list[virDomain] :
         t.join()
 
     return [f.return_value for f in futures]
+
 
 class TempDomain:
     def __init__(self, connection: virConnect):

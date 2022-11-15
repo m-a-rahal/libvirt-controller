@@ -1,8 +1,14 @@
 from __future__ import annotations
 from libvirt_api.commands import *
 from libvirt_api.commands.function_enum import FunctionEnum
-from libvirt_api.json_xml.jsonxmldict import JsonXmlDict, CommandSyntax as Syntx
+from libvirt_api.json_xml.jsonxmldict import JsonXmlDict, CommandSyntax as Syntax
+"""
+DESCRIPTION:
+this module maps all the commands to the right functions,
+keep it a separate file for clarity, and also because it won't work if you put it above the functions
 
+Here I used Enums () to 
+"""
 
 # TODO: 🔴[📨response] each response must identify the destination, so include that somewhere somehow
 class Command(Enum):
@@ -32,9 +38,18 @@ class Command(Enum):
         """returns enum for provided command string, or None"""
         return cls._member_map_.get(command_str, None)
 
-    def json(self, **args) -> str:
+    def as_json(self, **args) -> str:
         """create the json format of the command given the arguments"""
-        json_dict = JsonXmlDict({})
-        json_dict[Syntx.command.value] = self.name
-        json_dict[Syntx.args.value] = args
-        return json_dict.json
+        return self.as_dict(**args).json
+
+    def as_xml(self, **args) -> str:
+        """create the XML format of the command given the arguments
+        this function might not be needed"""
+        return self.as_dict(**args).json
+
+    def as_dict(self, **args) -> JsonXmlDict:
+        """create the dict (JsonDict) format of the command given the arguments"""
+        dict_ = JsonXmlDict({})
+        dict_[Syntax.command.value] = self.name
+        dict_[Syntax.args.value] = args
+        return dict_
